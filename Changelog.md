@@ -496,84 +496,32 @@ Roles
 * Analyst
 
 ⸻
-
-[2.1.0] — Planned
-
-AI
-
-* Expanded AI workflows
-* Improved Copilot capabilities
-* Advanced content strategy
-* More intelligent recommendations
-* Improved trend detection
-
-Analytics
-
-* Advanced creator reports
-* Expanded performance dashboards
-* Deeper content comparisons
-* Advanced keyword analytics
-
-Platform Support
-
-* Additional social platforms
-* Additional gaming platforms
-* Expanded provider integrations
-
-Automation
-
-* More automation rules
-* Expanded Autopilot capabilities
-* Additional authorized publishing integrations
-
+VYNT Changelog
+All notable changes to VYNT are documented here.
+VYNT is proprietary software developed by VYNT Technologies.
 ⸻
-
-[2.2.0] — Planned
-
-Intelligence
-
-* Advanced trend forecasting
-* Cross-platform intelligence
-* Expanded topic clustering
-* Improved search-intent analysis
-* Creator benchmarking
-
-AI
-
-* More advanced AI agents
-* Multi-step AI workflows
-* Strategy generation
-* Automated content planning
-
+[2.2.0] — Custom Domain & Infrastructure Integration
+Added
+ * Primary domain support for vynt.jp
+ * Cloudflare Workers Custom Domain routing
+ * Infrastructure configuration in wrangler.toml
+Infrastructure & Edge Security
+ * Migrated production authentication endpoints from .workers.dev staging URLs to vynt.jp
+ * Configured Cloudflare Edge proxying and SSL/TLS encryption for vyn-tiktok-auth worker
+ * Updated CORS allowed origins for [https://vynt.jp](https://vynt.jp) and [https://www.vynt.jp](https://www.vynt.jp)
+ * Updated Content Security Policy (CSP) headers to validate primary domain traffic
+Authentication & Integrations
+ * Reconfigured TikTok OAuth Redirect URIs to [https://vynt.jp/api/callback](https://vynt.jp/api/callback)
+ * Streamlined TikTok authorization consent screen branding for vynt.jp
+ * Updated TikTok Developer Portal integration parameters
+Deployment & Tooling
+ * Defined custom domain patterns within wrangler.toml for automated deployments
+ * Preserved edge routing configuration across deployment workflows
 ⸻
-
-[3.0.0] — Future
-
-Planned Architecture
-
-* Advanced machine-learning forecasting
-* Real-time analytics
-* Multi-platform creator intelligence
-* Advanced automated publishing
-* Expanded blockchain provenance
-* Creator teams
-* Organization accounts
-* Advanced permissions
-* Enterprise features
-* Advanced billing
-* Expanded API access
-* Developer integrations
-
-⸻
-
 Development Notes
-
 VYNT’s scoring, forecasting, SEO, and recommendation systems are proprietary VYNT analytics and should not be interpreted as the internal ranking or recommendation algorithms of any third-party platform.
-
 VYNT integrations are designed to use authorized APIs and approved access methods.
-
 Features marked Planned are not represented as currently available functionality.
-
 ⸻
-
 © 2026 VYNT Technologies. All rights reserved.
+
