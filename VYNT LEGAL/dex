@@ -1,10 +1,10 @@
-CREATE TABLE IF NOT EXISTS user_seo (
-  open_id TEXT PRIMARY KEY,
-  video_id TEXT,
-  seo_score INTEGER,
-  seo_breakdown TEXT,
-  hooks TEXT,
-  keywords TEXT,
-  hashtags TEXT,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS scheduled_posts (
+  id TEXT PRIMARY KEY,
+  open_id TEXT,
+  access_token TEXT,
+  video_title TEXT,
+  chosen_caption TEXT,
+  chosen_hashtags TEXT,
+  scheduled_time DATETIME,
+  status TEXT DEFAULT 'pending'
 );
