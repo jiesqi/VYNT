@@ -9,13 +9,17 @@ export default {
     const url = new URL(request.url);
     const REDIRECT_URI = `${url.origin}/oauth/callback`;
 
-    // 0. MAIN / LANDING PAGE
+    // 0. LANDING PAGE
     if (url.pathname === "/") {
       return page(`
-        <div style="max-width:500px; margin:60px auto; text-align:center;">
-          <h1 style="font-size:32px; color:#70e000; margin-bottom:10px;">VYNT AI Engine</h1>
-          <p style="color:#aaa; margin-bottom:30px;">Automated TikTok SEO, Hook Generation & Smart Post Scheduling</p>
-          <a href="/oauth/tiktok" style="display:inline-block; background:#70e000; color:#000; padding:12px 28px; border-radius:8px; font-weight:bold; text-decoration:none; font-size:15px;">Connect TikTok Account</a>
+        <div style="max-width:550px; margin:60px auto; text-align:center;">
+          <h1 style="font-size:36px; color:#70e000; margin-bottom:10px;">VYNT AI Engine</h1>
+          <p style="color:#aaa; margin-bottom:30px; font-size:15px; line-height:1.5;">
+            Automated TikTok SEO, Hook Generation & Smart Post Scheduling for Creators.
+          </p>
+          <a href="/oauth/tiktok" style="display:inline-block; background:#70e000; color:#000; padding:14px 32px; border-radius:8px; font-weight:bold; text-decoration:none; font-size:16px;">
+            Connect TikTok Account
+          </a>
         </div>
       `);
     }
