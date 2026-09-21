@@ -1,13 +1,1041 @@
-VYNT is a gaming creator platform where users find opportunities, apply for programs, and create gaming content with AI.
+const CLIENT_KEY = "sbawcke2l51k5b54vw";
 
-VYNT is a gaming creator platform that connects users with gaming content opportunities and creator programs. Users can browse available opportunities, review requirements, submit applications, and participate in approved programs. The platform is designed to support creators who produce gaming content for platforms such as TikTok. VYNT uses AI-powered features to assist with creator workflows, content-related tasks, recommendations, and other platform functions. TikTok Login Kit is used to authenticate users and connect their TikTok account to their VYNT account when TikTok-related functionality is required. The scope of the product is limited to gaming creator opportunities, creator participation, content workflows, and related platform services. VYNT only requests the TikTok information and permissions necessary for the specific functionality being provided. Users can manage their participation through the VYNT website and can review the Terms of Service and Privacy Policy before using the service.
+const TIKTOK_AUTHORIZE =
+  "https://www.tiktok.com/v2/auth/authorize/";
 
-https://dev.vynttechnologies.workers.dev/terms/
+const TIKTOK_TOKEN =
+  "https://open.tiktokapis.com/v2/oauth/token/";
 
-https://dev.vynttechnologies.workers.dev/privacy/
+const TIKTOK_API =
+  "https://open.tiktokapis.com/v2";
 
-https://dev.vynttechnologies.workers.dev/
+const SCOPES =
+  "user.info.basic,video.list";
 
-VYNT is a gaming creator platform that uses TikTok Login Kit and TikTok’s Content Posting API to allow creators to connect their TikTok accounts and publish gaming content through the VYNT platform. Login Kit is used to securely authenticate users and obtain the basic TikTok account information needed to associate their TikTok account with their VYNT profile. After authentication, VYNT uses permitted TikTok user information to identify the connected account and provide account-specific functionality. The Content Posting API is used to support video uploads and publishing. Users can select or upload gaming videos through VYNT, provide applicable video details, and initiate the publishing process to their connected TikTok account. The API functionality is limited to the content-posting workflow and related account information required for that workflow. VYNT does not intend to access unrelated TikTok data. Users remain in control of the content they choose to upload and publish.
+export default {
+  async fetch(request, env) {
 
-https://vynt-tiktok-auth.vynttechnologies.workers.dev/oauth/callback
+    const url = new URL(request.url);
+
+    const REDIRECT_URI =
+      `${url.origin}/oauth/callback`;
+
+    // =========================================
+    // START TIKTOK OAUTH
+    // =========================================
+
+    if (url.pathname === "/oauth/tiktok") {
+
+      const state = crypto.randomUUID();
+
+      const auth =
+        new URL(TIKTOK_AUTHORIZE);
+
+      auth.searchParams.set(
+        "client_key",
+        CLIENT_KEY
+      );
+
+      auth.searchParams.set(
+        "response_type",
+        "code"
+      );
+
+      auth.searchParams.set(
+        "scope",
+        SCOPES
+      );
+
+      auth.searchParams.set(
+        "redirect_uri",
+        REDIRECT_URI
+      );
+
+      auth.searchParams.set(
+        "state",
+        state
+      );
+
+      return new Response(null, {
+        status: 302,
+
+        headers: {
+          "Location": auth.toString(),
+
+          "Set-Cookie":
+            `vynt_tiktok_state=${state}; Max-Age=600; Path=/; HttpOnly; Secure; SameSite=Lax`
+        }
+      });
+    }
+
+    // =========================================
+    // TIKTOK CALLBACK
+    // =========================================
+
+    if (url.pathname === "/oauth/callback") {
+
+      const code =
+        url.searchParams.get("code");
+
+      const state =
+        url.searchParams.get("state");
+
+      const error =
+        url.searchParams.get("error");
+
+      const errorDescription =
+        url.searchParams.get("error_description");
+
+      if (error) {
+
+        return page(`
+          <h1>TikTok Authorization Failed</h1>
+
+          <p>
+            ${escapeHTML(
+              errorDescription || error
+            )}
+          </p>
+
+          <a href="https://dev.vynttechnologies.workers.dev/">
+            Return to VYNT
+          </a>
+        `, 400);
+      }
+
+      if (!code || !state) {
+
+        return page(`
+          <h1>Missing Authorization Data</h1>
+
+          <p>
+            TikTok did not return the required
+            authorization information.
+          </p>
+
+          <a href="https://dev.vynttechnologies.workers.dev/">
+            Return to VYNT
+          </a>
+        `, 400);
+      }
+
+      // =========================================
+      // CHECK OAUTH STATE
+      // =========================================
+
+      const cookies =
+        parseCookies(
+          request.headers.get("Cookie")
+        );
+
+      if (
+        cookies.vynt_tiktok_state !== state
+      ) {
+
+        return page(`
+          <h1>Invalid OAuth State</h1>
+
+          <p>
+            The security check failed.
+            Please try connecting again.
+          </p>
+        `, 403);
+      }
+
+      // =========================================
+      // CHECK SECRET
+      // =========================================
+
+      if (!env.TIKTOK_CLIENT_SECRET) {
+
+        return page(`
+          <h1>VYNT Configuration Error</h1>
+
+          <p>
+            TIKTOK_CLIENT_SECRET is missing
+            from the Cloudflare Worker.
+          </p>
+        `, 500);
+      }
+
+      // =========================================
+      // EXCHANGE CODE FOR TOKEN
+      // =========================================
+
+      const tokenResponse =
+        await fetch(
+          TIKTOK_TOKEN,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/x-www-form-urlencoded"
+            },
+
+            body:
+              new URLSearchParams({
+                client_key:
+                  CLIENT_KEY,
+
+                client_secret:
+                  env.TIKTOK_CLIENT_SECRET,
+
+                code:
+                  code,
+
+                grant_type:
+                  "authorization_code",
+
+                redirect_uri:
+                  REDIRECT_URI
+              })
+          }
+        );
+
+      const token =
+        await tokenResponse.json();
+
+      if (
+        !tokenResponse.ok ||
+        !token.access_token
+      ) {
+
+        return page(`
+          <h1>TikTok Token Error</h1>
+
+          <pre>${escapeHTML(
+            JSON.stringify(
+              token,
+              null,
+              2
+            )
+          )}</pre>
+
+          <a href="https://dev.vynttechnologies.workers.dev/">
+            Return to VYNT
+          </a>
+        `, 500);
+      }
+
+      const accessToken =
+        token.access_token;
+
+      // =========================================
+      // GET USER PROFILE
+      // =========================================
+
+      const profileResponse =
+        await fetch(
+          `${TIKTOK_API}/user/info/?fields=open_id,display_name,avatar_url,profile_deep_link,bio_description`,
+          {
+            method: "GET",
+
+            headers: {
+              Authorization:
+                `Bearer ${accessToken}`
+            }
+          }
+        );
+
+      const profile =
+        await profileResponse.json();
+
+      const user =
+        profile.data?.user;
+
+      if (!user) {
+
+        return page(`
+          <h1>TikTok Connected</h1>
+
+          <p>
+            Authorization succeeded, but TikTok
+            did not return profile information.
+          </p>
+
+          <pre>${escapeHTML(
+            JSON.stringify(
+              profile,
+              null,
+              2
+            )
+          )}</pre>
+
+          <a href="https://dev.vynttechnologies.workers.dev/">
+            Return to VYNT
+          </a>
+        `);
+      }
+
+      // =========================================
+      // GET TIKTOK VIDEOS
+      // =========================================
+
+      const videoFields = [
+        "id",
+        "title",
+        "video_description",
+        "cover_image_url",
+        "share_url",
+        "duration",
+        "create_time"
+      ].join(",");
+
+      const videosResponse =
+        await fetch(
+          `${TIKTOK_API}/video/list/?fields=${encodeURIComponent(videoFields)}`,
+          {
+            method: "POST",
+
+            headers: {
+              Authorization:
+                `Bearer ${accessToken}`,
+
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                max_count: 20
+              })
+          }
+        );
+
+      const videosData =
+        await videosResponse.json();
+
+      const videos =
+        videosData.data?.videos || [];
+
+      // =========================================
+      // RENDER SUCCESS PAGE
+      // =========================================
+
+      return page(`
+        
+        ${
+          user.avatar_url
+            ? `
+              <img
+                class="avatar"
+                src="${escapeHTML(
+                  user.avatar_url
+                )}"
+                alt="TikTok profile"
+              >
+            `
+            : ""
+        }
+
+        <div class="success">
+          ✓ TikTok Connected
+        </div>
+
+        <h1>
+          ${escapeHTML(
+            user.display_name ||
+            "TikTok User"
+          )}
+        </h1>
+
+        ${
+          user.bio_description
+            ? `
+              <p class="bio">
+                ${escapeHTML(
+                  user.bio_description
+                )}
+              </p>
+            `
+            : ""
+        }
+
+        ${
+          user.profile_deep_link
+            ? `
+              <a
+                class="secondary"
+                href="${escapeHTML(
+                  user.profile_deep_link
+                )}"
+                target="_blank"
+                rel="noopener"
+              >
+                Open TikTok Profile
+              </a>
+            `
+            : ""
+        }
+
+        <div class="divider"></div>
+
+        <h2>
+          Your TikTok Videos
+        </h2>
+
+        <p class="muted">
+          ${videos.length}
+          recent public video${
+            videos.length === 1
+              ? ""
+              : "s"
+          }
+          retrieved through TikTok's Display API.
+        </p>
+
+        ${
+          videos.length
+            ? `
+              <div class="videos">
+
+                ${videos.map(video => `
+                  
+                  <div class="video">
+
+                    ${
+                      video.cover_image_url
+                        ? `
+                          <img
+                            src="${escapeHTML(
+                              video.cover_image_url
+                            )}"
+                            alt="TikTok video thumbnail"
+                            loading="lazy"
+                          >
+                        `
+                        : ""
+                    }
+
+                    <div class="video-content">
+
+                      <h3>
+                        ${escapeHTML(
+                          video.title ||
+                          "Untitled TikTok Video"
+                        )}
+                      </h3>
+
+                      ${
+                        video.video_description
+                          ? `
+                            <p>
+                              ${escapeHTML(
+                                video.video_description
+                              )}
+                            </p>
+                          `
+                          : ""
+                      }
+
+                      ${
+                        video.duration
+                          ? `
+                            <span class="meta">
+                              ${escapeHTML(
+                                String(
+                                  video.duration
+                                )
+                              )} seconds
+                            </span>
+                          `
+                          : ""
+                      }
+
+                      ${
+                        video.create_time
+                          ? `
+                            <span class="meta">
+                              ${formatDate(
+                                video.create_time
+                              )}
+                            </span>
+                          `
+                          : ""
+                      }
+
+                      ${
+                        video.share_url
+                          ? `
+                            <a
+                              class="watch"
+                              href="${escapeHTML(
+                                video.share_url
+                              )}"
+                              target="_blank"
+                              rel="noopener"
+                            >
+                              View on TikTok
+                            </a>
+                          `
+                          : ""
+                      }
+
+                    </div>
+
+                  </div>
+
+                `).join("")}
+
+              </div>
+            `
+            : `
+              <div class="empty">
+
+                <h3>
+                  No public videos returned
+                </h3>
+
+                <p>
+                  TikTok authorized the connection,
+                  but no public videos were returned
+                  for this account.
+                </p>
+
+              </div>
+            `
+        }
+
+        <div class="divider"></div>
+
+        <div class="api-status">
+
+          <strong>
+            VYNT TikTok Integration
+          </strong>
+
+          <p>
+            Login Kit: Connected
+          </p>
+
+          <p>
+            Profile API: Connected
+          </p>
+
+          <p>
+            Display API: Connected
+          </p>
+
+          <p>
+            Scope:
+            ${escapeHTML(
+              token.scope ||
+              SCOPES
+            )}
+          </p>
+
+        </div>
+
+        <a
+          class="return"
+          href="https://dev.vynttechnologies.workers.dev/"
+        >
+          Return to VYNT
+        </a>
+
+      `);
+    }
+
+    // =========================================
+    // WORKER STATUS
+    // =========================================
+
+    return new Response(
+      "VYNT TikTok OAuth Worker is running."
+    );
+  }
+};
+
+
+// =============================================
+// COOKIE PARSER
+// =============================================
+
+function parseCookies(header) {
+
+  const cookies = {};
+
+  if (!header) {
+    return cookies;
+  }
+
+  for (
+    const part of header.split(";")
+  ) {
+
+    const [
+      key,
+      ...value
+    ] =
+      part.trim().split("=");
+
+    if (key) {
+      cookies[key] =
+        value.join("=");
+    }
+  }
+
+  return cookies;
+}
+
+
+// =============================================
+// DATE FORMATTER
+// =============================================
+
+function formatDate(timestamp) {
+
+  try {
+
+    const date =
+      new Date(
+        Number(timestamp) * 1000
+      );
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "";
+    }
+
+    return date.toLocaleDateString(
+      "en-US",
+      {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      }
+    );
+
+  } catch {
+
+    return "";
+  }
+}
+
+
+// =============================================
+// HTML PAGE
+// =============================================
+
+function page(
+  content,
+  status = 200
+) {
+
+  return new Response(`
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1"
+>
+
+<title>
+VYNT — TikTok Connected
+</title>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+
+  margin: 0;
+
+  min-height: 100vh;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background:
+    #08090c;
+
+  color:
+    #ffffff;
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  padding:
+    20px;
+}
+
+.box {
+
+  width:
+    100%;
+
+  max-width:
+    760px;
+
+  padding:
+    40px;
+
+  background:
+    #101217;
+
+  border:
+    1px solid #24272e;
+
+  border-radius:
+    20px;
+
+  text-align:
+    center;
+
+  box-shadow:
+    0 20px 80px
+    rgba(0,0,0,.35);
+}
+
+.avatar {
+
+  width:
+    100px;
+
+  height:
+    100px;
+
+  border-radius:
+    50%;
+
+  object-fit:
+    cover;
+
+  border:
+    3px solid #ffffff;
+}
+
+.success {
+
+  margin-top:
+    20px;
+
+  color:
+    #70e000;
+
+  font-weight:
+    800;
+
+  font-size:
+    15px;
+}
+
+h1 {
+
+  margin:
+    8px 0;
+
+  font-size:
+    30px;
+}
+
+h2 {
+
+  margin-top:
+    10px;
+
+  font-size:
+    23px;
+}
+
+.bio {
+
+  color:
+    #aaa;
+
+  line-height:
+    1.6;
+}
+
+.muted {
+
+  color:
+    #888;
+
+  margin-bottom:
+    25px;
+}
+
+.divider {
+
+  height:
+    1px;
+
+  background:
+    #24272e;
+
+  margin:
+    30px 0;
+}
+
+.videos {
+
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(220px, 1fr)
+    );
+
+  gap:
+    18px;
+
+  text-align:
+    left;
+}
+
+.video {
+
+  overflow:
+    hidden;
+
+  background:
+    #181b21;
+
+  border:
+    1px solid #282c34;
+
+  border-radius:
+    14px;
+}
+
+.video img {
+
+  width:
+    100%;
+
+  height:
+    220px;
+
+  object-fit:
+    cover;
+
+  display:
+    block;
+}
+
+.video-content {
+
+  padding:
+    16px;
+}
+
+.video h3 {
+
+  margin:
+    0 0 8px;
+
+  font-size:
+    17px;
+
+  line-height:
+    1.4;
+}
+
+.video p {
+
+  color:
+    #aaa;
+
+  font-size:
+    14px;
+
+  line-height:
+    1.5;
+
+}
+
+.meta {
+
+  display:
+    block;
+
+  color:
+    #777;
+
+  font-size:
+    12px;
+
+  margin-top:
+    6px;
+}
+
+a {
+
+  display:
+    inline-block;
+
+  margin-top:
+    15px;
+
+  padding:
+    12px 20px;
+
+  border-radius:
+    10px;
+
+  text-decoration:
+    none;
+
+  font-weight:
+    700;
+}
+
+.secondary {
+
+  background:
+    #24272e;
+
+  color:
+    #ffffff;
+}
+
+.watch {
+
+  background:
+    #ffffff;
+
+  color:
+    #000000;
+
+  margin-top:
+    12px;
+}
+
+.return {
+
+  background:
+    #ffffff;
+
+  color:
+    #000000;
+
+  margin-top:
+    25px;
+}
+
+.empty {
+
+  padding:
+    25px;
+
+  background:
+    #181b21;
+
+  border-radius:
+    14px;
+
+  color:
+    #aaa;
+}
+
+.api-status {
+
+  color:
+    #aaa;
+
+  font-size:
+    14px;
+
+  line-height:
+    1.5;
+}
+
+.api-status strong {
+
+  color:
+    #ffffff;
+
+  font-size:
+    16px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+${content}
+
+</div>
+
+</body>
+
+</html>
+
+`, {
+
+    status,
+
+    headers: {
+
+      "Content-Type":
+        "text/html;charset=UTF-8",
+
+      "Cache-Control":
+        "no-store"
+
+    }
+
+  });
+}
+
+
+// =============================================
+// HTML ESCAPE
+// =============================================
+
+function escapeHTML(value) {
+
+  return String(value)
+
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+}
