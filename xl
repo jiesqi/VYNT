@@ -13,14 +13,14 @@ export default {
     if (url.pathname === "/") {
       return page(`
         <div style="max-width:580px; margin:80px auto; text-align:center; padding: 20px;">
-          <div style="display:inline-block; padding: 6px 16px; background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 20px; color: #00f0ff; font-size: 13px; font-weight: 600; margin-bottom: 20px; letter-spacing: 0.5px;">
+          <div style="display:inline-block; padding: 6px 16px; background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 20px; color: #00f0ff; font-size: 13px; font-weight: 600; margin-bottom: 20px;">
             AI-POWERED TIKTOK GROWTH & SCHEDULING
           </div>
-          <h1 style="font-size:44px; font-weight:800; color:#fff; margin:0 0 16px 0; letter-spacing: -1px; line-height: 1.2;">
+          <h1 style="font-size:44px; font-weight:800; color:#fff; margin:0 0 16px 0; line-height: 1.2;">
             VYNT <span style="color:#00f0ff; text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">Engine</span>
           </h1>
           <p style="color:#94a3b8; margin-bottom:36px; font-size:16px; line-height:1.6;">
-            Automated TikTok SEO analysis, multi-angle hook generation, spoken keyword targets, and automated D1 post scheduling.
+            TikTok-native feed grid, multi-angle hook engine, spoken keyword targets, and automated D1 scheduling.
           </p>
           <a href="/oauth/tiktok" class="btn-neon-lg">
             Connect TikTok Account
@@ -162,7 +162,7 @@ export default {
       const videosRes = await fetch(videoUrl.toString(), {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ max_count: 10 })
+        body: JSON.stringify({ max_count: 12 })
       });
       const videosData = await videosRes.json();
       const videos = videosData.data?.videos || [];
@@ -340,7 +340,6 @@ function page(content, status = 200) {
             min-height: 100vh;
           }
           a { color: #00f0ff; text-decoration: none; transition: color 0.2s ease; }
-          a:hover { color: #70f8ff; }
 
           .btn-neon {
             background: #00f0ff;
@@ -351,7 +350,7 @@ function page(content, status = 200) {
             font-weight: 700;
             font-size: 13px;
             cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s ease;
             box-shadow: 0 0 15px rgba(0, 240, 255, 0.35);
             display: inline-block;
           }
@@ -369,14 +368,9 @@ function page(content, status = 200) {
             font-weight: 800;
             font-size: 16px;
             cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s ease;
             box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
             display: inline-block;
-          }
-          .btn-neon-lg:hover {
-            background: #38bdf8;
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.75);
-            transform: translateY(-2px);
           }
           .btn-secondary {
             background: #1e293b;
@@ -387,7 +381,6 @@ function page(content, status = 200) {
             font-weight: 600;
             font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s ease;
           }
           .btn-secondary:hover {
             background: #334155;
@@ -403,20 +396,87 @@ function page(content, status = 200) {
             font-weight: 700;
             font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s ease;
           }
           .btn-outline-neon:hover {
             background: rgba(0, 240, 255, 0.15);
-            box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+          }
+
+          /* TIKTOK GRID LAYOUT STYLING */
+          .tiktok-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 18px;
+            padding: 10px 0;
+          }
+
+          .tiktok-card {
+            position: relative;
+            aspect-ratio: 9/16;
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #1e293b;
+            cursor: pointer;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+          }
+
+          .tiktok-card:hover {
+            transform: translateY(-4px);
+            border-color: #00f0ff;
+            box-shadow: 0 10px 30px rgba(0, 240, 255, 0.3);
+          }
+
+          .tiktok-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .tiktok-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 40px 12px 12px 12px;
+            background: linear-gradient(to top, rgba(8, 13, 26, 0.95), rgba(8, 13, 26, 0.4) 60%, transparent);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+          }
+
+          .tiktok-card-title {
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 0 0 6px 0;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+
+          .tiktok-card-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(8, 13, 26, 0.85);
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
           }
 
           .hook-tab {
             background: #0f172a;
             border: 1px solid #334155;
             color: #94a3b8;
-            padding: 4px 10px;
+            padding: 6px 12px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -427,59 +487,31 @@ function page(content, status = 200) {
             color: #00f0ff;
           }
 
-          .card {
-            background: #0f172a;
-            border: 1px solid #1e293b;
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-          }
-          .card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(0, 240, 255, 0.5);
-            box-shadow: 0 10px 30px -10px rgba(0, 240, 255, 0.25);
-          }
-
-          .score-gauge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 240, 255, 0.1);
-            border: 1px solid #00f0ff;
-            color: #00f0ff;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 800;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
-          }
-
           .pill-tag {
             display: inline-block;
             background: #1e293b;
             border: 1px solid #334155;
             color: #38bdf8;
-            padding: 2px 8px;
+            padding: 3px 10px;
             border-radius: 12px;
             font-size: 11px;
             margin-right: 4px;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
           }
 
           .dropdown-item {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 10px;
             padding: 10px 16px;
             font-size: 13px;
             color: #e2e8f0;
             text-decoration: none;
             transition: background 0.2s ease, color 0.2s ease;
+            cursor: pointer;
           }
           .dropdown-item:hover {
-            background: rgba(0, 240, 255, 0.1);
+            background: rgba(0, 240, 255, 0.12);
             color: #00f0ff;
           }
 
@@ -491,14 +523,12 @@ function page(content, status = 200) {
             padding: 10px 12px;
             font-size: 13px;
             outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
           }
           input[type="text"]:focus, select:focus, textarea:focus, input[type="datetime-local"]:focus {
             border-color: #00f0ff;
             box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
           }
 
-          /* TOUR HIGHLIGHT STYLES */
           .tour-highlight {
             outline: 2px solid #00f0ff !important;
             box-shadow: 0 0 25px rgba(0, 240, 255, 0.7) !important;
@@ -517,8 +547,30 @@ function renderDashboardHTML(user, videos) {
   const avatarUrl = user.avatar_url_100 || user.avatar_url || user.avatar_large_url || "";
   const displayName = escapeHTML(user.display_name || "TikTok Creator");
 
-  const videoCards = (videos || []).map(v => {
-    const vidId = escapeHTML(v.id || "");
+  // RENDER TIKTOK GRID THUMBNAILS
+  const tiktokGridCards = (videos || []).map((v, idx) => {
+    const vidId = escapeHTML(v.id || `vid_${idx}`);
+    const coverUrl = escapeHTML(v.cover_image_url || "");
+    const titleEsc = escapeHTML(v.title || "Untitled Video");
+    const score = v.ai_seo?.score || 88;
+
+    return `
+      <div class="tiktok-card tour-video-card" onclick="openSEOStudio('${vidId}')">
+        <div class="tiktok-card-badge">⚡ ${score} SEO</div>
+        ${coverUrl ? `<img src="${coverUrl}" alt="Thumbnail">` : `<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#475569;">No Cover</div>`}
+        <div class="tiktok-overlay">
+          <p class="tiktok-card-title">${titleEsc}</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#00f0ff; font-weight:700;">
+            <span>Click to Optimize ➔</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // RENDER SEO OPTIMIZATION MODALS/DATA PANELS FOR EACH VIDEO
+  const videoStudioModals = (videos || []).map((v, idx) => {
+    const vidId = escapeHTML(v.id || `vid_${idx}`);
     const score = v.ai_seo?.score || 88;
     const hooks = v.ai_seo?.hooks || {
       patternInterrupt: "Stop scrolling right now!",
@@ -540,101 +592,114 @@ function renderDashboardHTML(user, videos) {
     const overlayPills = (keywords.textOverlays || []).map(k => `<span class="pill-tag" style="color:#00f0ff;">📺 ${escapeHTML(k)}</span>`).join("");
 
     return `
-      <div class="card" id="card-${vidId}">
-        ${coverUrl ? `<img src="${coverUrl}" style="width:100%; height:180px; object-fit:cover; border-radius:10px; border: 1px solid #1e293b;" alt="Video Cover">` : ''}
-        
-        <div>
-          <h3 class="v-title" style="margin:0 0 8px 0; font-size:16px; font-weight:700; color:#fff;">${titleEsc}</h3>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="score-gauge">⚡ SEO SCORE: ${score}/100</div>
-            ${shareUrl ? `<a href="${shareUrl}" target="_blank" style="color:#38bdf8; font-size:12px; font-weight:600;">Watch on TikTok ↗</a>` : ''}
-          </div>
-        </div>
-
-        <!-- MULTI-HOOK TAB SWITCHER -->
-        <div style="background:#1e293b; padding:12px; border-radius:10px; border-left: 3px solid #00f0ff;" class="tour-hook-box">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <strong style="color:#38bdf8; font-size:11px; letter-spacing:0.8px; text-transform:uppercase;">HOOK ENGINE MULTI-TAB</strong>
-            <button data-vid="${vidId}" onclick="copyActiveHook(this)" class="btn-secondary" style="padding:3px 8px; font-size:10px;">Copy Selected</button>
-          </div>
-
-          <div style="display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap;">
-            <button class="hook-tab active" onclick="switchHook(this, '${vidId}', 'patternInterrupt')">Pattern Interrupt</button>
-            <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'curiosityGap')">Curiosity Gap</button>
-            <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'painPoint')">Pain Point</button>
-            <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'valueFirst')">Value First</button>
-          </div>
-
-          <p id="hook-text-${vidId}" style="font-size:13px; margin:0; color:#e2e8f0; line-height:1.4;">${escapeHTML(hooks.patternInterrupt)}</p>
+      <div id="studio-modal-${vidId}" class="studio-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8, 13, 26, 0.9); backdrop-filter:blur(10px); z-index:2000; overflow-y:auto; padding:30px 15px;">
+        <div style="max-width:850px; margin:20px auto; background:#0f172a; border:1px solid #00f0ff; border-radius:20px; padding:28px; box-shadow:0 0 50px rgba(0, 240, 255, 0.3); position:relative;">
           
-          <input type="hidden" id="hook-data-patternInterrupt-${vidId}" value="${escapeHTML(hooks.patternInterrupt)}">
-          <input type="hidden" id="hook-data-curiosityGap-${vidId}" value="${escapeHTML(hooks.curiosityGap)}">
-          <input type="hidden" id="hook-data-painPoint-${vidId}" value="${escapeHTML(hooks.painPoint)}">
-          <input type="hidden" id="hook-data-valueFirst-${vidId}" value="${escapeHTML(hooks.valueFirst)}">
-        </div>
+          <!-- CLOSE BUTTON -->
+          <button onclick="closeSEOStudio('${vidId}')" style="position:absolute; top:20px; right:20px; background:#1e293b; border:1px solid #334155; color:#fff; width:36px; height:36px; border-radius:50%; font-size:16px; cursor:pointer;">✕</button>
 
-        <!-- KEYWORD TARGETS BADGES -->
-        <div style="background:#1e293b; padding:10px; border-radius:10px;">
-          <strong style="color:#94a3b8; font-size:11px; display:block; margin-bottom:6px; text-transform:uppercase;">Spoken & On-Screen Keyword Badges</strong>
-          <div>${spokenPills} ${overlayPills}</div>
-        </div>
+          <div style="display:flex; gap:24px; flex-wrap:wrap;">
+            <!-- LEFT COLUMN: VIDEO THUMBNAIL & METRICS -->
+            <div style="flex:1; min-width:260px; max-width:300px;">
+              ${coverUrl ? `<img src="${coverUrl}" style="width:100%; aspect-ratio:9/16; object-fit:cover; border-radius:12px; border:1px solid #1e293b; margin-bottom:14px;" alt="Video">` : ''}
+              <div style="background:#1e293b; padding:12px; border-radius:10px; text-align:center; margin-bottom:10px;">
+                <span style="font-size:11px; color:#94a3b8; display:block; text-transform:uppercase;">AI Optimization Score</span>
+                <span style="font-size:24px; font-weight:900; color:#00f0ff; text-shadow:0 0 15px rgba(0,240,255,0.5);">⚡ ${score} / 100</span>
+              </div>
+              ${shareUrl ? `<a href="${shareUrl}" target="_blank" class="btn-secondary" style="display:block; text-align:center; width:100%;">View on TikTok ↗</a>` : ''}
+            </div>
 
-        <!-- HASHTAG MATRIX -->
-        <div style="background:#1e293b; padding:12px; border-radius:10px; border-left: 3px solid #38bdf8;">
-          <strong style="color:#00f0ff; font-size:11px; letter-spacing:0.8px; display:block; margin-bottom:4px; text-transform:uppercase;">3x3 HASHTAG MATRIX</strong>
-          <p id="tags-${vidId}" style="font-size:12px; color:#94a3b8; margin:0; line-height:1.4;">${escapeHTML(allTags)}</p>
-        </div>
+            <!-- RIGHT COLUMN: AI SEO CONTROLS -->
+            <div style="flex:2; min-width:300px; display:flex; flex-direction:column; gap:16px;">
+              <h2 style="margin:0; font-size:20px; font-weight:800; color:#fff;" id="studio-title-${vidId}">${titleEsc}</h2>
 
-        <!-- RE-ANALYZE WITH TONE SELECTOR -->
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <div style="display:flex; gap:6px;">
-            <input type="text" id="niche-${vidId}" placeholder="Keyword / Niche Focus" style="flex:1;">
-            <select id="tone-${vidId}" style="width:110px;">
-              <option value="High Energy">High Energy</option>
-              <option value="Storytelling">Storytelling</option>
-              <option value="Controversial">Controversial</option>
-              <option value="Educational">Educational</option>
-            </select>
+              <!-- HOOK ENGINE TAB SWITCHER -->
+              <div style="background:#1e293b; padding:16px; border-radius:12px; border-left:4px solid #00f0ff;" class="tour-hook-engine">
+                <div style="display:flex; justify-content:space-between; align-align:center; margin-bottom:10px;">
+                  <strong style="color:#00f0ff; font-size:12px; letter-spacing:0.8px; text-transform:uppercase;">HOOK ENGINE MULTI-TAB</strong>
+                  <button data-vid="${vidId}" onclick="copyActiveHook(this)" class="btn-secondary" style="padding:4px 10px; font-size:11px;">Copy Hook</button>
+                </div>
+
+                <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                  <button class="hook-tab active" onclick="switchHook(this, '${vidId}', 'patternInterrupt')">Pattern Interrupt</button>
+                  <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'curiosityGap')">Curiosity Gap</button>
+                  <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'painPoint')">Pain Point</button>
+                  <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'valueFirst')">Value First</button>
+                </div>
+
+                <p id="hook-text-${vidId}" style="font-size:14px; margin:0; color:#e2e8f0; line-height:1.5; background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155;">${escapeHTML(hooks.patternInterrupt)}</p>
+                
+                <input type="hidden" id="hook-data-patternInterrupt-${vidId}" value="${escapeHTML(hooks.patternInterrupt)}">
+                <input type="hidden" id="hook-data-curiosityGap-${vidId}" value="${escapeHTML(hooks.curiosityGap)}">
+                <input type="hidden" id="hook-data-painPoint-${vidId}" value="${escapeHTML(hooks.painPoint)}">
+                <input type="hidden" id="hook-data-valueFirst-${vidId}" value="${escapeHTML(hooks.valueFirst)}">
+              </div>
+
+              <!-- KEYWORD BADGES -->
+              <div style="background:#1e293b; padding:14px; border-radius:12px;">
+                <strong style="color:#94a3b8; font-size:11px; display:block; margin-bottom:8px; text-transform:uppercase;">Spoken & On-Screen Keyword Badges</strong>
+                <div>${spokenPills} ${overlayPills}</div>
+              </div>
+
+              <!-- HASHTAG MATRIX -->
+              <div style="background:#1e293b; padding:14px; border-radius:12px; border-left:4px solid #38bdf8;">
+                <strong style="color:#38bdf8; font-size:11px; letter-spacing:0.8px; display:block; margin-bottom:6px; text-transform:uppercase;">3x3 HASHTAG MATRIX</strong>
+                <p id="tags-${vidId}" style="font-size:13px; color:#cbd5e1; margin:0; line-height:1.4;">${escapeHTML(allTags)}</p>
+              </div>
+
+              <!-- RE-ANALYZE CONTROL -->
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="niche-${vidId}" placeholder="Keyword / Niche Target" style="flex:1;">
+                <select id="tone-${vidId}" style="width:130px;">
+                  <option value="High Energy">High Energy</option>
+                  <option value="Storytelling">Storytelling</option>
+                  <option value="Controversial">Controversial</option>
+                  <option value="Educational">Educational</option>
+                </select>
+                <button data-vid="${vidId}" data-title="${titleEsc}" onclick="reAnalyze(this)" class="btn-outline-neon">Re-Run AI</button>
+              </div>
+
+              <!-- ACTIONS -->
+              <div style="display:flex; gap:10px; margin-top:8px;">
+                <button data-vid="${vidId}" onclick="copyMasterPayload(this)" class="btn-secondary" style="flex:1; padding:12px;">Copy Full Payload</button>
+                <button data-vid="${vidId}" data-title="${titleEsc}" onclick="openScheduleModalFromStudio('${vidId}', '${titleEsc}')" class="btn-neon" style="flex:1; padding:12px; text-align:center;">Schedule Post</button>
+              </div>
+
+            </div>
           </div>
-          <button data-vid="${vidId}" data-title="${titleEsc}" onclick="reAnalyze(this)" class="btn-outline-neon" style="width:100%;">Re-Run AI Model</button>
-        </div>
-
-        <!-- ACTIONS -->
-        <div style="display:flex; gap:8px; margin-top:auto;">
-          <button data-vid="${vidId}" onclick="copyMasterPayload(this)" class="btn-secondary" style="flex:1;">Copy Master Payload</button>
-          <button data-vid="${vidId}" data-title="${titleEsc}" onclick="openScheduleModal(this)" class="btn-neon tour-schedule-btn" style="flex:1; text-align:center;">Schedule Post</button>
         </div>
       </div>
     `;
   }).join("");
 
   return page(`
-    <!-- TOP NAVBAR WITH PROFILE DROPDOWN -->
-    <nav style="display:flex; justify-content:space-between; align-items:center; padding:18px 36px; background:#0f172a; border-bottom:1px solid rgba(0, 240, 255, 0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.3); position:relative; z-index:1000;">
-      <div style="display:flex; align-items:center; gap:28px;">
-        <span style="font-weight:900; font-size:20px; color:#00f0ff; letter-spacing:1.5px; text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);">VYNT AI</span>
+    <!-- NAVBAR WITH WORKING PROFILE DROPDOWN MENU -->
+    <nav style="display:flex; justify-content:space-between; align-items:center; padding:16px 32px; background:#0f172a; border-bottom:1px solid rgba(0, 240, 255, 0.2); position:relative; z-index:1000;">
+      <div style="display:flex; align-items:center; gap:24px;">
+        <span style="font-weight:900; font-size:22px; color:#00f0ff; letter-spacing:1.5px; text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);">VYNT AI</span>
         <a href="/" style="color:#94a3b8; font-size:13px; font-weight:600;">Main Page</a>
         <button onclick="startDashboardTour()" class="btn-outline-neon" style="padding:4px 10px; font-size:11px;">🚀 Guided Tour</button>
       </div>
       
-      <!-- USER PROFILE DROPDOWN -->
-      <div style="position:relative;" id="profileDropdown">
-        <button onclick="toggleDropdown()" style="display:flex; align-items:center; gap:10px; background: rgba(30, 41, 59, 0.6); padding: 6px 14px 6px 8px; border-radius: 30px; border: 1px solid rgba(0, 240, 255, 0.3); cursor:pointer; color:#fff;">
-          ${avatarUrl ? `<img src="${escapeHTML(avatarUrl)}" style="width:32px; height:32px; border-radius:50%; border:2px solid #00f0ff; object-fit:cover;" alt="Avatar">` : ''}
+      <!-- PROFILE MENU WRAPPER -->
+      <div style="position:relative;" id="profileWrapper">
+        <div id="profileBtn" onclick="toggleProfileMenu(event)" style="display:flex; align-items:center; gap:10px; background: rgba(30, 41, 59, 0.8); padding: 6px 14px 6px 8px; border-radius: 30px; border: 1px solid #00f0ff; cursor:pointer; user-select:none; box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);" class="tour-profile-btn">
+          ${avatarUrl ? `<img src="${escapeHTML(avatarUrl)}" style="width:32px; height:32px; border-radius:50%; border:2px solid #00f0ff; object-fit:cover;" alt="Avatar">` : `<div style="width:32px; height:32px; border-radius:50%; background:#00f0ff;"></div>`}
           <span style="font-weight:700; font-size:13px; color:#f8fafc;">${displayName}</span>
           <span style="font-size:10px; color:#00f0ff;">▼</span>
-        </button>
+        </div>
 
-        <div id="dropdownMenu" style="display:none; position:absolute; right:0; top:48px; width:240px; background:#0f172a; border:1px solid #00f0ff; border-radius:12px; padding:8px 0; box-shadow: 0 10px 30px rgba(0, 240, 255, 0.25); backdrop-filter:blur(10px);">
+        <!-- DROPDOWN MENU CONTAINER -->
+        <div id="dropdownMenu" style="display:none; position:absolute; right:0; top:50px; width:260px; background:#0f172a; border:1px solid #00f0ff; border-radius:14px; padding:10px 0; box-shadow: 0 10px 40px rgba(0, 240, 255, 0.3); z-index:9999; backdrop-filter:blur(12px);">
           <div style="padding:10px 16px; border-bottom:1px solid #1e293b;">
-            <span style="display:block; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Connected Account</span>
+            <span style="display:block; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Account Connected</span>
             <span style="font-weight:700; font-size:13px; color:#00f0ff;">🟢 ${displayName}</span>
           </div>
 
-          <a href="javascript:void(0)" onclick="openQueueModal()" class="dropdown-item">📅 Scheduled Queue Manager</a>
-          <a href="javascript:void(0)" onclick="startDashboardTour()" class="dropdown-item">🚀 Interactive Dashboard Tour</a>
+          <div onclick="openQueueModal()" class="dropdown-item">📅 Scheduled Queue Manager</div>
+          <div onclick="startDashboardTour()" class="dropdown-item">🚀 Interactive Dashboard Tour</div>
           <a href="/oauth/tiktok" class="dropdown-item">🔄 Switch / Reconnect TikTok</a>
-          <a href="javascript:void(0)" onclick="exportCSV()" class="dropdown-item">📥 Export SEO Matrix (CSV)</a>
+          <div onclick="exportCSV()" class="dropdown-item">📥 Export SEO Matrix (CSV)</div>
 
           <div style="border-top:1px solid #1e293b; margin-top:6px; padding-top:6px;">
             <a href="/oauth/tiktok" class="dropdown-item" style="color:#ef4444;">🚪 Disconnect Account</a>
@@ -643,24 +708,28 @@ function renderDashboardHTML(user, videos) {
       </div>
     </nav>
 
-    <div style="max-width:1200px; margin:0 auto; padding: 40px 20px;">
-      <div style="text-align:center; margin-bottom:35px;">
-        <h1 style="font-size:32px; font-weight:800; color:#fff; margin:0 0 8px 0; letter-spacing:-0.5px;">TikTok Creator Dashboard</h1>
-        <p style="color:#94a3b8; font-size:14px; margin:0;">Cloudflare Workers AI, D1 Storage & Scheduled Automation Active</p>
+    <div style="max-width:1200px; margin:0 auto; padding: 30px 20px;">
+      <div style="text-align:center; margin-bottom:30px;">
+        <h1 style="font-size:30px; font-weight:800; color:#fff; margin:0 0 8px 0;">TikTok Creator Feed</h1>
+        <p style="color:#94a3b8; font-size:14px; margin:0;">Select any video thumbnail below to launch its full AI SEO Optimization Studio</p>
       </div>
       
-      <div style="display:flex; gap:12px; justify-content:center; margin-bottom:35px;">
-        <input type="text" id="search" placeholder="Search videos..." onkeyup="filterCards()" style="width:280px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-        <button onclick="exportCSV()" class="btn-secondary" style="padding: 10px 20px;">Export CSV Report</button>
+      <div style="display:flex; gap:12px; justify-content:center; margin-bottom:30px;">
+        <input type="text" id="search" placeholder="Search TikTok videos..." onkeyup="filterCards()" style="width:300px;">
+        <button onclick="exportCSV()" class="btn-secondary" style="padding:10px 18px;">Export CSV</button>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px; text-align:left;">
-        ${videoCards}
+      <!-- TIKTOK STYLE GRID -->
+      <div class="tiktok-grid" id="videoGrid">
+        ${tiktokGridCards}
       </div>
     </div>
 
-    <!-- SCHEDULE MODAL -->
-    <div id="scheduleModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8, 13, 26, 0.85); backdrop-filter: blur(8px); justify-content:center; align-items:center; z-index:999;">
+    <!-- VIDEO STUDIO MODALS -->
+    ${videoStudioModals}
+
+    <!-- SCHEDULE POST MODAL -->
+    <div id="scheduleModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8, 13, 26, 0.85); backdrop-filter: blur(8px); justify-content:center; align-items:center; z-index:3000;">
       <div style="background:#0f172a; border:1px solid #00f0ff; width:90%; max-width:480px; padding:30px; border-radius:20px; text-align:left; box-shadow: 0 0 40px rgba(0, 240, 255, 0.25);">
         <h2 style="margin-top:0; color:#00f0ff; font-size:22px; font-weight:800;">Schedule Auto-Post</h2>
         <input type="hidden" id="schedVidId">
@@ -686,7 +755,7 @@ function renderDashboardHTML(user, videos) {
     </div>
 
     <!-- SCHEDULED QUEUE MANAGER MODAL -->
-    <div id="queueModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8, 13, 26, 0.85); backdrop-filter: blur(8px); justify-content:center; align-items:center; z-index:999;">
+    <div id="queueModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8, 13, 26, 0.85); backdrop-filter: blur(8px); justify-content:center; align-items:center; z-index:3000;">
       <div style="background:#0f172a; border:1px solid #00f0ff; width:90%; max-width:650px; padding:30px; border-radius:20px; text-align:left; max-height:80vh; overflow-y:auto; box-shadow: 0 0 40px rgba(0, 240, 255, 0.25);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
           <h2 style="margin:0; color:#00f0ff; font-size:22px; font-weight:800;">📅 Scheduled Posts Queue (D1)</h2>
@@ -696,8 +765,8 @@ function renderDashboardHTML(user, videos) {
       </div>
     </div>
 
-    <!-- INTERACTIVE TOUR MODAL -->
-    <div id="tourModal" style="display:none; position:fixed; bottom:30px; right:30px; width:340px; background:#0f172a; border:2px solid #00f0ff; border-radius:16px; padding:20px; z-index:2000; box-shadow: 0 10px 40px rgba(0,240,255,0.4);">
+    <!-- GUIDED TOUR MODAL -->
+    <div id="tourModal" style="display:none; position:fixed; bottom:30px; right:30px; width:340px; background:#0f172a; border:2px solid #00f0ff; border-radius:16px; padding:20px; z-index:4000; box-shadow: 0 10px 40px rgba(0,240,255,0.4);">
       <h4 id="tourTitle" style="margin:0 0 8px 0; color:#00f0ff; font-size:16px;">Tour Step</h4>
       <p id="tourBody" style="font-size:13px; color:#cbd5e1; margin:0 0 16px 0; line-height:1.4;"></p>
       <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -710,17 +779,33 @@ function renderDashboardHTML(user, videos) {
     </div>
 
     <script>
-      function toggleDropdown() {
+      // DROPDOWN MENU HANDLER
+      function toggleProfileMenu(e) {
+        if (e) e.stopPropagation();
         const menu = document.getElementById("dropdownMenu");
-        menu.style.display = menu.style.display === "none" ? "block" : "none";
+        if (menu) {
+          menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
+        }
       }
 
       document.addEventListener("click", function(e) {
-        const drop = document.getElementById("profileDropdown");
-        if (drop && !drop.contains(e.target)) {
-          document.getElementById("dropdownMenu").style.display = "none";
+        const menu = document.getElementById("dropdownMenu");
+        const wrapper = document.getElementById("profileWrapper");
+        if (menu && wrapper && !wrapper.contains(e.target)) {
+          menu.style.display = "none";
         }
       });
+
+      // SEO STUDIO MODAL HANDLERS
+      function openSEOStudio(vidId) {
+        const studio = document.getElementById("studio-modal-" + vidId);
+        if (studio) studio.style.display = "block";
+      }
+
+      function closeSEOStudio(vidId) {
+        const studio = document.getElementById("studio-modal-" + vidId);
+        if (studio) studio.style.display = "none";
+      }
 
       function switchHook(btn, vidId, hookKey) {
         const parent = btn.parentElement;
@@ -740,7 +825,7 @@ function renderDashboardHTML(user, videos) {
 
       function copyMasterPayload(btn) {
         const vidId = btn.dataset.vid;
-        const title = document.querySelector("#card-" + vidId + " .v-title").innerText;
+        const title = document.getElementById("studio-title-" + vidId).innerText;
         const hook = document.getElementById("hook-text-" + vidId).innerText;
         const tags = document.getElementById("tags-" + vidId).innerText;
         
@@ -750,6 +835,7 @@ function renderDashboardHTML(user, videos) {
       }
 
       async function openQueueModal() {
+        document.getElementById("dropdownMenu").style.display = "none";
         document.getElementById("queueModal").style.display = "flex";
         const content = document.getElementById("queueListContent");
         content.innerHTML = '<p style="color:#aaa;">Fetching scheduled queue from D1...</p>';
@@ -789,20 +875,20 @@ function renderDashboardHTML(user, videos) {
 
       function filterCards() {
         const q = document.getElementById("search").value.toLowerCase();
-        document.querySelectorAll(".card").forEach(c => {
-          const t = c.querySelector(".v-title").innerText.toLowerCase();
-          c.style.display = t.includes(q) ? "flex" : "none";
+        document.querySelectorAll(".tiktok-card").forEach(c => {
+          const t = c.querySelector(".tiktok-card-title").innerText.toLowerCase();
+          c.style.display = t.includes(q) ? "block" : "none";
         });
       }
 
       function exportCSV() {
-        const rows = [["Title", "SEO Score", "Active Hook"]];
-        document.querySelectorAll(".card").forEach(c => {
-          const title = c.querySelector(".v-title") ? c.querySelector(".v-title").innerText : "";
-          const score = c.querySelector(".score-gauge") ? c.querySelector(".score-gauge").innerText : "";
-          const hookEl = c.querySelector("p[id^='hook-text-']");
-          const hook = hookEl ? hookEl.innerText : "";
-          rows.push(['"' + title.replace(/"/g, '""') + '"', '"' + score.replace(/"/g, '""') + '"', '"' + hook.replace(/"/g, '""') + '"']);
+        document.getElementById("dropdownMenu").style.display = "none";
+        const rows = [["Title", "Active Hook"]];
+        document.querySelectorAll(".studio-modal").forEach(c => {
+          const vidId = c.id.replace("studio-modal-", "");
+          const title = document.getElementById("studio-title-" + vidId) ? document.getElementById("studio-title-" + vidId).innerText : "";
+          const hook = document.getElementById("hook-text-" + vidId) ? document.getElementById("hook-text-" + vidId).innerText : "";
+          rows.push(['"' + title.replace(/"/g, '""') + '"', '"' + hook.replace(/"/g, '""') + '"']);
         });
         const csvContent = rows.map(r => r.join(",")).join("\\n");
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -837,9 +923,7 @@ function renderDashboardHTML(user, videos) {
         }
       }
 
-      function openScheduleModal(btn) {
-        const vidId = btn.dataset.vid;
-        const title = btn.dataset.title;
+      function openScheduleModalFromStudio(vidId, title) {
         const hookText = document.getElementById("hook-text-" + vidId) ? document.getElementById("hook-text-" + vidId).innerText : "";
         const tagsText = document.getElementById("tags-" + vidId) ? document.getElementById("tags-" + vidId).innerText : "";
 
@@ -890,23 +974,19 @@ function renderDashboardHTML(user, videos) {
       let tourStep = 0;
       const tourSteps = [
         {
-          target: ".tour-hook-box",
-          title: "1. Multi-Hook Engine",
-          body: "Click between Pattern Interrupt, Curiosity Gap, Pain Point, and Value First to preview and select different hook angles generated by Workers AI."
+          target: ".tour-video-card",
+          title: "1. TikTok Video Feed",
+          body: "Click on any video card in this TikTok-style grid layout to open its dedicated AI SEO Studio."
         },
         {
-          target: ".tour-schedule-btn",
-          title: "2. One-Click Scheduling",
-          body: "Queue your post into Cloudflare D1 storage for automated background posting via Cron Triggers."
-        },
-        {
-          target: "#profileDropdown",
-          title: "3. Creator Profile Menu",
-          body: "Access your scheduled post queue, account status, CSV export options, or reconnect your TikTok account."
+          target: ".tour-profile-btn",
+          title: "2. Working Profile Dropdown",
+          body: "Click your profile picture to access your account status, scheduled post queue, CSV export, and reconnection controls."
         }
       ];
 
       function startDashboardTour() {
+        document.getElementById("dropdownMenu").style.display = "none";
         tourStep = 0;
         document.getElementById("tourModal").style.display = "block";
         showTourStep();
