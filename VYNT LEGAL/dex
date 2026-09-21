@@ -1,58 +1,10 @@
-// =========================================
-// GET PROFILE (WITH EXPLICIT QUERY PARAMS)
-// =========================================
-const profileUrl = new URL(`${TIKTOK_API}/user/info/`);
-profileUrl.searchParams.set(
-  "fields",
-  "open_id,union_id,display_name,avatar_url,avatar_url_100,avatar_large_url"
+CREATE TABLE IF NOT EXISTS user_seo (
+  open_id TEXT PRIMARY KEY,
+  video_id TEXT,
+  seo_score INTEGER,
+  seo_breakdown TEXT,
+  hooks TEXT,
+  keywords TEXT,
+  hashtags TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
-const profileResponse = await fetch(profileUrl.toString(), {
-  method: "GET",
-  headers: {
-    Authorization: `Bearer ${accessToken}`
-  }
-});
-
-const profile = await profileResponse.json();
-const user = profile.data?.user;
-
-if (!user) {
-  return page(`
-    <h1>TikTok Profile Error</h1>
-    <pre>${escapeHTML(JSON.stringify(profile, null, 2))}</pre>
-    <a href="https://dev.vynttechnologies.workers.dev/">Return to VYNT</a>
-  `, 400);
-}
-
-// =========================================
-// GET VIDEOS (WITH EXPLICIT QUERY PARAMS)
-// =========================================
-const videoUrl = new URL(`${TIKTOK_API}/video/list/`);
-videoUrl.searchParams.set(
-  "fields",
-  "id,title,video_description,cover_image_url,share_url,duration,create_time"
-);
-
-const videosResponse = await fetch(videoUrl.toString(), {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${accessToken}`,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    max_count: 10
-  })
-});
-
-const videosData = await videosResponse.json();
-
-if (!videosResponse.ok || videosData.error?.code) {
-  return page(`
-    <h1>TikTok Video API Error</h1>
-    <pre>${escapeHTML(JSON.stringify(videosData, null, 2))}</pre>
-    <a href="https://dev.vynttechnologies.workers.dev/">Return to VYNT</a>
-  `, 400);
-}
-
-const videos = videosData.data?.videos || [];
