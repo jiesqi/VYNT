@@ -1,467 +1,328 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VYNT Technologies | Legal</title>
-<meta name="description" content="Official legal information for VYNT Technologies.">
-<style>
-* {
-  box-sizing: border-box;
-}
-html {
-  scroll-behavior: smooth;
-}
-body {
-  margin: 0;
-  min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-               "SF Pro Text", Inter, Segoe UI, Roboto, Arial, sans-serif;
-  color: #f5f7fa;
-  background:
-    radial-gradient(circle at 20% 10%, rgba(75,105,255,.16), transparent 32%),
-    radial-gradient(circle at 80% 80%, rgba(0,220,255,.08), transparent 30%),
-    #07090d;
-}
-.container {
-  width: min(1100px, calc(100% - 40px));
-  margin: auto;
-}
-header {
-  padding: 28px 0;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-.nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  font-weight: 700;
-  letter-spacing: -.02em;
-}
-.brand img {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-  border-radius: 11px;
-}
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-.nav-links a {
-  color: #aeb7c6;
-  text-decoration: none;
-  font-size: 14px;
-}
-.nav-links a:hover {
-  color: white;
-}
-.hero {
-  min-height: 650px;
-  display: flex;
-  align-items: center;
-  padding: 80px 0;
-}
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1.1fr .9fr;
-  gap: 70px;
-  align-items: center;
-}
-.eyebrow {
-  color: #8ea2ff;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  margin-bottom: 18px;
-}
-h1 {
-  margin: 0;
-  max-width: 700px;
-  font-size: clamp(44px,7vw,76px);
-  line-height: .98;
-  letter-spacing: -.055em;
-}
-.hero p {
-  max-width: 610px;
-  color: #aeb7c6;
-  font-size: 18px;
-  line-height: 1.7;
-  margin: 26px 0 34px;
-}
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 13px;
-}
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 20px;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: 650;
-  font-size: 14px;
-  transition: transform .2s, background .2s;
-}
-.button:hover {
-  transform: translateY(-2px);
-}
-.primary {
-  color: #07101c;
-  background: #ffffff;
-}
-.secondary {
-  color: #ffffff;
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.11);
-}
-.tiktok {
-  color: #ffffff;
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.11);
-}
-.signup {
-  color: #ffffff;
-  background: rgba(142,162,255,.15);
-  border: 1px solid rgba(142,162,255,.3);
-}
-.visual {
-  display: flex;
-  justify-content: center;
-}
-.visual img {
-  width: min(100%,430px);
-  max-height: 470px;
-  object-fit: contain;
-  filter: drop-shadow(0 30px 70px rgba(0,0,0,.45));
-  border-radius: 24px;
-}
-.legal {
-  padding: 30px 0 90px;
-}
-.section-title {
-  margin-bottom: 25px;
-}
-.section-title h2 {
-  font-size: 30px;
-  letter-spacing: -.035em;
-  margin: 0 0 8px;
-}
-.section-title p {
-  color: #8792a3;
-  margin: 0;
-}
-.cards {
-  display: grid;
-  grid-template-columns: repeat(2,1fr);
-  gap: 18px;
-}
-.card {
-  padding: 30px;
-  border: 1px solid rgba(255,255,255,.09);
-  border-radius: 20px;
-  background: rgba(255,255,255,.035);
-  backdrop-filter: blur(16px);
-}
-.card h3 {
-  margin: 0 0 10px;
-  font-size: 21px;
-}
-.card p {
-  color: #919bab;
-  line-height: 1.65;
-  margin: 0 0 22px;
-}
-.card a {
-  color: #a8b6ff;
-  text-decoration: none;
-  font-weight: 650;
-}
-.card a:hover {
-  color: white;
-}
-.connect {
-  padding: 30px 0 100px;
-}
-.connect-grid {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 30px;
-  align-items: center;
-  padding: 35px;
-  border: 1px solid rgba(255,255,255,.09);
-  border-radius: 22px;
-  background: rgba(255,255,255,.035);
-}
-.connect h2 {
-  margin: 0 0 10px;
-  font-size: 30px;
-  letter-spacing: -.035em;
-}
-.connect p {
-  color: #919bab;
-  line-height: 1.65;
-  max-width: 600px;
-}
-.qr {
-  display: flex;
-  justify-content: center;
-}
-.qr img {
-  width: 210px;
-  height: 210px;
-  object-fit: contain;
-  background: white;
-  padding: 10px;
-  border-radius: 18px;
-}
-footer {
-  padding: 25px 0 40px;
-  border-top: 1px solid rgba(255,255,255,.08);
-  color: #6f7887;
-  font-size: 13px;
-}
-.footer-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-.footer-links {
-  display: flex;
-  gap: 18px;
-}
-.footer-links a {
-  color: #6f7887;
-  text-decoration: none;
-}
-.footer-links a:hover {
-  color: white;
-}
-@media (max-width:760px) {
-  .hero {
-    padding: 60px 0;
-  }
-  .hero-grid {
-    grid-template-columns: 1fr;
-    gap: 45px;
-  }
-  .visual {
-    order: -1;
-  }
-  .visual img {
-    max-height: 320px;
-  }
-  .cards {
-    grid-template-columns: 1fr;
-  }
-  .connect-grid {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-  .qr {
-    order: -1;
-  }
-  .buttons {
-    flex-direction: column;
-  }
-  .button {
-    width: 100%;
-  }
-  .nav-links {
-    display: none;
-  }
-  h1 {
-    font-size: 48px;
-  }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VYNT Technologies — AI-powered gaming intelligence.">
+  <title>VYNT Technologies</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #08090c;
+      color: #f5f5f5;
+      line-height: 1.6;
+    }
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+    .container {
+      width: min(1100px, 92%);
+      margin: auto;
+    }
+    nav {
+      padding: 22px 0;
+      border-bottom: 1px solid #202228;
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      width: 120px;
+      height: auto;
+    }
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      font-size: 14px;
+      color: #aaa;
+    }
+    .nav-links a:hover {
+      color: white;
+    }
+    .hero {
+      text-align: center;
+      padding: 90px 0 70px;
+    }
+    .hero-image {
+      width: min(700px, 90%);
+      max-height: 220px;
+      object-fit: contain;
+      margin-bottom: 35px;
+    }
+    .hero h1 {
+      font-size: clamp(38px, 7vw, 72px);
+      letter-spacing: -2px;
+      margin-bottom: 15px;
+    }
+    .hero p {
+      color: #aaa;
+      font-size: 18px;
+      max-width: 650px;
+      margin: auto;
+    }
+    .buttons {
+      margin-top: 32px;
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .button {
+      display: inline-block;
+      padding: 13px 22px;
+      border-radius: 10px;
+      border: 1px solid #30333a;
+      background: #111318;
+      font-weight: 600;
+      font-size: 14px;
+      transition: 0.2s;
+    }
+    .button:hover {
+      background: #1b1e25;
+      transform: translateY(-1px);
+    }
+    .button.primary {
+      background: white;
+      color: black;
+      border-color: white;
+    }
+    section {
+      padding: 65px 0;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 30px;
+      margin-bottom: 35px;
+    }
+    .legal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .card {
+      background: #101217;
+      border: 1px solid #24272e;
+      border-radius: 16px;
+      padding: 28px;
+    }
+    .card h3 {
+      margin-bottom: 10px;
+      font-size: 20px;
+    }
+    .card p {
+      color: #999;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .card a {
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .connect {
+      text-align: center;
+    }
+    .qr {
+      width: 180px;
+      height: 180px;
+      object-fit: contain;
+      margin: 30px auto 20px;
+      display: block;
+      border-radius: 12px;
+      background: white;
+      padding: 8px;
+    }
+    .connect p {
+      color: #999;
+      max-width: 600px;
+      margin: auto;
+    }
+    footer {
+      border-top: 1px solid #202228;
+      padding: 30px 0;
+      color: #777;
+      font-size: 13px;
+    }
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .footer-links {
+      display: flex;
+      gap: 18px;
+    }
+    .footer-links a:hover {
+      color: white;
+    }
+    @media (max-width: 700px) {
+      .legal-grid {
+        grid-template-columns: 1fr;
+      }
+      .nav-links {
+        display: none;
+      }
+      .hero {
+        padding-top: 60px;
+      }
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div class="container nav">
-<div class="brand">
-  <img
-    src="https://raw.githubusercontent.com/jiesqi/VYNT/main/assets/branding/IMG_0560.png"
-    alt="VYNT Technologies">
-  <span>VYNT Technologies</span>
-</div>
-<div class="nav-links">
-  <a href="#legal">Legal</a>
-  <a
-    href="https://www.tiktok.com/@vnyt.ai"
-    target="_blank"
-    rel="noopener">
-    TikTok ↗
-  </a>
-  <a
-    href="https://github.com/jiesqi/VYNT"
-    target="_blank"
-    rel="noopener">
-    GitHub ↗
-  </a>
-</div>
-  </div>
-</header>
-<main>
-<section class="hero">
-  <div class="container hero-grid">
-<div>
-  <div class="eyebrow">
-    VYNT Technologies
-  </div>
-  <h1>
-    Visibility.<br>
-    Intelligence.<br>
-    Yield.
-  </h1>
-  <p>
-    VYNT is an AI-powered gaming intelligence platform built for
-    content analytics, optimization, automation, and creator insights.
-  </p>
-  <div class="buttons">
-    <a class="button primary" href="#legal">
-      View Legal Documents
-    </a>
-    <a
-      class="button signup"
-      href="YOUR_EMAIL_SIGNUP_URL"
-      target="_blank"
-      rel="noopener">
-      Join VYNT
-    </a>
-    <a
-      class="button tiktok"
-      href="https://www.tiktok.com/@vnyt.ai"
-      target="_blank"
-      rel="noopener">
-      Follow on TikTok ↗
-    </a>
-    <a
-      class="button secondary"
-      href="https://github.com/jiesqi/VYNT"
-      target="_blank"
-      rel="noopener">
-      View GitHub ↗
-    </a>
-  </div>
-</div>
-<div class="visual">
-  <img
-    src="https://raw.githubusercontent.com/jiesqi/VYNT/main/assets/branding/IMG_0559.png"
-    alt="VYNT Technologies">
-</div>
-  </div>
-</section>
-<section class="legal" id="legal">
-  <div class="container">
-<div class="section-title">
-  <h2>Legal</h2>
-  <p>
-    Official policies governing the use of VYNT services.
-  </p>
-</div>
-<div class="cards">
-  <article class="card">
-    <h3>Terms of Service</h3>
-    <p>
-      The terms governing access to VYNT, including accounts,
-      content, AI features, automation, subscriptions,
-      and third-party integrations.
-    </p>
-    <a href="terms.html">
-      Read Terms of Service →
-    </a>
-  </article>
-  <article class="card">
-    <h3>Privacy Policy</h3>
-    <p>
-      Information about how VYNT collects, uses, processes,
-      protects, and retains information when you use the platform.
-    </p>
-    <a href="privacy.html">
-      Read Privacy Policy →
-    </a>
-  </article>
-</div>
-  </div>
-</section>
-<section class="connect">
-  <div class="container">
-<div class="connect-grid">
-  <div>
-    <h2>Connect with VYNT</h2>
-    <p>
-      Follow VYNT on TikTok for gaming intelligence,
-      creator insights, product updates, and VYNT content.
-    </p>
-    <div class="buttons">
-      <a
-        class="button tiktok"
-        href="https://www.tiktok.com/@vnyt.ai"
-        target="_blank"
-        rel="noopener">
-        Open VYNT on TikTok ↗
+  <nav>
+    <div class="container nav-inner">
+      <a href="/">
+        <img
+          class="logo"
+          src="https://raw.githubusercontent.com/jiesqi/VYNT/main/assets/branding/IMG_0560.png"
+          alt="VYNT Technologies"
+        >
       </a>
-      <a
-        class="button signup"
-        href="YOUR_EMAIL_SIGNUP_URL"
-        target="_blank"
-        rel="noopener">
-        Join the Email List
-      </a>
+      <div class="nav-links">
+        <a href="/privacy/">Privacy</a>
+        <a href="/terms/">Terms</a>
+        <a href="https://github.com/jiesqi/VYNT" target="_blank">GitHub</a>
+      </div>
     </div>
-  </div>
-  <div class="qr">
-    <a
-      href="https://www.tiktok.com/@vnyt.ai"
-      target="_blank"
-      rel="noopener">
-      <img
-        src="https://raw.githubusercontent.com/jiesqi/VYNT/main/assets/diagrams/IMG_0563.png"
-        alt="Scan to visit VYNT on TikTok">
-    </a>
-  </div>
-</div>
-  </div>
-</section>
-</main>
-<footer>
-  <div class="container footer-row">
-<span>
-  © 2026 VYNT Technologies. All rights reserved.
-</span>
-<div class="footer-links">
-  <a href="terms.html">
-    Terms
-  </a>
-  <a href="privacy.html">
-    Privacy
-  </a>
-  <a
-    href="https://github.com/jiesqi/VYNT"
-    target="_blank"
-    rel="noopener">
-    GitHub
-  </a>
-  <a
-    href="https://www.tiktok.com/@vnyt.ai"
-    target="_blank"
-    rel="noopener">
-    TikTok
-  </a>
-</div>
-  </div>
-</footer>
+  </nav>
+  <main>
+    <section class="hero">
+      <div class="container">
+        <img
+          class="hero-image"
+          src="https://raw.githubusercontent.com/jiesqi/VYNT/main/assets/branding/IMG_0559.png"
+          alt="VYNT Technologies"
+        >
+        <h1>VYNT Technologies</h1>
+        <p>
+          AI-powered gaming intelligence for content analytics,
+          optimization, automation, and creator insights.
+        </p>
+        <div class="buttons">
+          <a class="button primary" href="/privacy/">
+            Privacy Policy
+          </a>
+          <a class="button" href="/terms/">
+            Terms of Service
+          </a>
+          <a
+            class="button"
+            href="https://github.com/jiesqi/VYNT"
+            target="_blank"
+          >
+            View GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+    <section>
+      <div class="container">
+        <h2 class="section-title">Legal Documents</h2>
+        <div class="legal-grid">
+          <div class="card">
+            <h3>Privacy Policy</h3>
+            <p>
+              Learn how VYNT Technologies collects, uses,
+              protects, and manages information.
+            </p>
+            <a href="/privacy/">
+              Read Privacy Policy →
+            </a>
+          </div>
+          <div class="card">
+            <h3>Terms of Service</h3>
+            <p>
+              Review the terms governing access to and use
+              of VYNT Technologies services.
+            </p>
+            <a href="/terms/">
+              Read Terms of Service →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="connect">
+      <div class="container">
+        <h2 class="section-title">Connect with VYNT</h2>
+        <p>
+          Follow VYNT Technologies for gaming intelligence,
+          product updates, and creator-focused technology.
+        </p>
+        <div class="buttons">
+          <a
+            class="button primary"
+            href="https://www.tiktok.com/@vnyt.ai"
+            target="_blank"
+          >
+            Follow on TikTok
+          </a>
+          <a
+            class="button"
+            href="YOUR_EMAIL_SIGNUP_URL"
+            target="_blank"
+          >
+            Join VYNT
+          </a>
+        </div>
+        <a
+          href="https://www.tiktok.com/@vnyt.ai"
+          target="_blank"
+        >
+          <img
+            class="qr"
+            src="https://raw.githubusercontent.com/jiesqi/VYNT/main/assets/diagrams/IMG_0563.png"
+            alt="VYNT TikTok QR Code"
+          >
+        </a>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <div class="container footer-inner">
+      <div>
+        © 2026 VYNT Technologies. All rights reserved.
+      </div>
+      <div class="footer-links">
+        <a href="/privacy/">Privacy</a>
+        <a href="/terms/">Terms</a>
+        <a
+          href="https://github.com/jiesqi/VYNT"
+          target="_blank"
+        >
+          GitHub
+        </a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
+
+[/writing]
+
+Upload this index.html alongside:
+
+index.html
+privacy/
+  index.html
+terms/
+  index.html
+
+Then TikTok should be able to check:
+
+/privacy/
+
+and your Terms page will be available at:
+
+/terms/
+
+One thing: replace YOUR_EMAIL_SIGNUP_URL with your actual signup form URL before deploying.
