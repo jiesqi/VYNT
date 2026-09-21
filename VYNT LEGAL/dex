@@ -223,11 +223,12 @@ export default {
 
       // =========================================
       // GET USER PROFILE
+      // REVISION: Query only basic allowed fields under user.info.basic
       // =========================================
 
       const profileResponse =
         await fetch(
-          `${TIKTOK_API}/user/info/?fields=open_id,display_name,avatar_url,profile_deep_link,bio_description`,
+          `${TIKTOK_API}/user/info/?fields=open_id,union_id,display_name,avatar_url,avatar_url_100,avatar_large_url`,
           {
             method: "GET",
 
@@ -270,21 +271,14 @@ export default {
 
       // =========================================
       // GET TIKTOK VIDEOS
+      // REVISION: Standardize unencoded query parameter string
       // =========================================
 
-      const videoFields = [
-        "id",
-        "title",
-        "video_description",
-        "cover_image_url",
-        "share_url",
-        "duration",
-        "create_time"
-      ].join(",");
+      const videoFields = "id,title,video_description,cover_image_url,share_url,duration,create_time";
 
       const videosResponse =
         await fetch(
-          `${TIKTOK_API}/video/list/?fields=${encodeURIComponent(videoFields)}`,
+          `${TIKTOK_API}/video/list/?fields=${videoFields}`,
           {
             method: "POST",
 
@@ -339,35 +333,6 @@ export default {
             "TikTok User"
           )}
         </h1>
-
-        ${
-          user.bio_description
-            ? `
-              <p class="bio">
-                ${escapeHTML(
-                  user.bio_description
-                )}
-              </p>
-            `
-            : ""
-        }
-
-        ${
-          user.profile_deep_link
-            ? `
-              <a
-                class="secondary"
-                href="${escapeHTML(
-                  user.profile_deep_link
-                )}"
-                target="_blank"
-                rel="noopener"
-              >
-                Open TikTok Profile
-              </a>
-            `
-            : ""
-        }
 
         <div class="divider"></div>
 
