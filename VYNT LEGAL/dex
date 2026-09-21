@@ -1,23 +1,58 @@
--- 1. Store comprehensive AI SEO diagnostics
-CREATE TABLE IF NOT EXISTS user_seo (
-  open_id TEXT PRIMARY KEY,
-  video_id TEXT,
-  seo_score INTEGER,
-  seo_breakdown TEXT, -- JSON string: hookStrength, indexability, cta, length
-  hooks TEXT,         -- JSON string: patternInterrupt, curiosityGap, painPoint, valueFirst
-  keywords TEXT,      -- JSON string: searchQueries, spokenKeywords, textOverlays
-  hashtags TEXT,      -- JSON string: massReach, niche, longTail
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+// =========================================
+// GET PROFILE (WITH EXPLICIT QUERY PARAMS)
+// =========================================
+const profileUrl = new URL(`${TIKTOK_API}/user/info/`);
+profileUrl.searchParams.set(
+  "fields",
+  "open_id,union_id,display_name,avatar_url,avatar_url_100,avatar_large_url"
 );
 
--- 2. Store scheduled posts for automated TikTok publishing/draft push
-CREATE TABLE IF NOT EXISTS scheduled_posts (
-  id TEXT PRIMARY KEY,
-  open_id TEXT,
-  access_token TEXT,
-  video_title TEXT,
-  chosen_caption TEXT,
-  chosen_hashtags TEXT,
-  scheduled_time DATETIME,
-  status TEXT DEFAULT 'pending' -- 'pending', 'published', 'failed'
+const profileResponse = await fetch(profileUrl.toString(), {
+  method: "GET",
+  headers: {
+    Authorization: `Bearer ${accessToken}`
+  }
+});
+
+const profile = await profileResponse.json();
+const user = profile.data?.user;
+
+if (!user) {
+  return page(`
+    <h1>TikTok Profile Error</h1>
+    <pre>${escapeHTML(JSON.stringify(profile, null, 2))}</pre>
+    <a href="https://dev.vynttechnologies.workers.dev/">Return to VYNT</a>
+  `, 400);
+}
+
+// =========================================
+// GET VIDEOS (WITH EXPLICIT QUERY PARAMS)
+// =========================================
+const videoUrl = new URL(`${TIKTOK_API}/video/list/`);
+videoUrl.searchParams.set(
+  "fields",
+  "id,title,video_description,cover_image_url,share_url,duration,create_time"
 );
+
+const videosResponse = await fetch(videoUrl.toString(), {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    max_count: 10
+  })
+});
+
+const videosData = await videosResponse.json();
+
+if (!videosResponse.ok || videosData.error?.code) {
+  return page(`
+    <h1>TikTok Video API Error</h1>
+    <pre>${escapeHTML(JSON.stringify(videosData, null, 2))}</pre>
+    <a href="https://dev.vynttechnologies.workers.dev/">Return to VYNT</a>
+  `, 400);
+}
+
+const videos = videosData.data?.videos || [];
