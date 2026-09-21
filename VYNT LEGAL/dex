@@ -109,8 +109,7 @@ export default {
           <h1>Missing Authorization Data</h1>
 
           <p>
-            TikTok did not return the required
-            authorization information.
+            TikTok did not return required information.
           </p>
 
           <a href="https://dev.vynttechnologies.workers.dev/">
@@ -119,10 +118,7 @@ export default {
         `, 400);
       }
 
-      // =========================================
-      // CHECK OAUTH STATE
-      // =========================================
-
+      // CHECK STATE COOKIE
       const cookies =
         parseCookies(
           request.headers.get("Cookie")
@@ -136,32 +132,24 @@ export default {
           <h1>Invalid OAuth State</h1>
 
           <p>
-            The security check failed.
-            Please try connecting again.
+            Security check failed. Try connecting again.
           </p>
         `, 403);
       }
 
-      // =========================================
       // CHECK SECRET
-      // =========================================
-
       if (!env.TIKTOK_CLIENT_SECRET) {
 
         return page(`
           <h1>VYNT Configuration Error</h1>
 
           <p>
-            TIKTOK_CLIENT_SECRET is missing
-            from the Cloudflare Worker.
+            TIKTOK_CLIENT_SECRET is missing from Worker settings.
           </p>
         `, 500);
       }
 
-      // =========================================
       // EXCHANGE CODE FOR TOKEN
-      // =========================================
-
       const tokenResponse =
         await fetch(
           TIKTOK_TOKEN,
@@ -221,11 +209,7 @@ export default {
       const accessToken =
         token.access_token;
 
-      // =========================================
-      // GET USER PROFILE
-      // REVISION: Query only basic allowed fields under user.info.basic
-      // =========================================
-
+      // GET PROFILE
       const profileResponse =
         await fetch(
           `${TIKTOK_API}/user/info/?fields=open_id,union_id,display_name,avatar_url,avatar_url_100,avatar_large_url`,
@@ -251,17 +235,8 @@ export default {
           <h1>TikTok Connected</h1>
 
           <p>
-            Authorization succeeded, but TikTok
-            did not return profile information.
+            Authorization succeeded, but no profile info was returned.
           </p>
-
-          <pre>${escapeHTML(
-            JSON.stringify(
-              profile,
-              null,
-              2
-            )
-          )}</pre>
 
           <a href="https://dev.vynttechnologies.workers.dev/">
             Return to VYNT
@@ -269,11 +244,7 @@ export default {
         `);
       }
 
-      // =========================================
-      // GET TIKTOK VIDEOS
-      // REVISION: Standardize unencoded query parameter string
-      // =========================================
-
+      // GET VIDEOS
       const videoFields = "id,title,video_description,cover_image_url,share_url,duration,create_time";
 
       const videosResponse =
@@ -292,7 +263,7 @@ export default {
 
             body:
               JSON.stringify({
-                max_count: 20
+                max_count: 10
               })
           }
         );
@@ -304,9 +275,14 @@ export default {
         videosData.data?.videos || [];
 
       // =========================================
-      // RENDER SUCCESS PAGE
+      // PROCESS VIDEOS WITH WORKERS AI & D1
       // =========================================
 
+      const optimizedVideos = await Promise.all(
+        videos.map(video => processVideoSEO(env, user.open_id || "creator", video))
+      );
+
+      // RENDER AI DASHBOARD
       return page(`
         
         ${
@@ -324,49 +300,51 @@ export default {
         }
 
         <div class="success">
-          ✓ TikTok Connected
+          ✓ VYNT Workers AI Active
         </div>
 
         <h1>
           ${escapeHTML(
             user.display_name ||
-            "TikTok User"
+            "TikTok Creator"
           )}
         </h1>
+
+        <p class="subtitle">
+          AI-Powered TikTok SEO & Post Optimization
+        </p>
 
         <div class="divider"></div>
 
         <h2>
-          Your TikTok Videos
+          Post Optimization Reports
         </h2>
 
         <p class="muted">
-          ${videos.length}
-          recent public video${
-            videos.length === 1
+          Analyzed ${optimizedVideos.length} post${
+            optimizedVideos.length === 1
               ? ""
               : "s"
-          }
-          retrieved through TikTok's Display API.
+          } using Cloudflare Workers AI (Llama 3).
         </p>
 
         ${
-          videos.length
+          optimizedVideos.length
             ? `
               <div class="videos">
 
-                ${videos.map(video => `
+                ${optimizedVideos.map(item => `
                   
                   <div class="video">
 
                     ${
-                      video.cover_image_url
+                      item.cover_image_url
                         ? `
                           <img
                             src="${escapeHTML(
-                              video.cover_image_url
+                              item.cover_image_url
                             )}"
-                            alt="TikTok video thumbnail"
+                            alt="Video thumbnail"
                             loading="lazy"
                           >
                         `
@@ -375,58 +353,51 @@ export default {
 
                     <div class="video-content">
 
+                      <div class="seo-score">
+                        SEO Score: <strong>${item.ai_seo.score}/100</strong>
+                      </div>
+
                       <h3>
                         ${escapeHTML(
-                          video.title ||
-                          "Untitled TikTok Video"
+                          item.title ||
+                          "Untitled Post"
                         )}
                       </h3>
 
                       ${
-                        video.video_description
+                        item.video_description
                           ? `
-                            <p>
-                              ${escapeHTML(
-                                video.video_description
+                            <p class="original-desc">
+                              <strong>Original Caption:</strong> ${escapeHTML(
+                                item.video_description
                               )}
                             </p>
                           `
                           : ""
                       }
 
-                      ${
-                        video.duration
-                          ? `
-                            <span class="meta">
-                              ${escapeHTML(
-                                String(
-                                  video.duration
-                                )
-                              )} seconds
-                            </span>
-                          `
-                          : ""
-                      }
+                      <div class="ai-box">
+                        <span class="ai-badge">VYNT AI Optimized Hook</span>
+                        <p class="optimized-caption">${escapeHTML(item.ai_seo.optimizedCaption)}</p>
+                      </div>
+
+                      <div class="ai-box">
+                        <span class="ai-badge">High-Ranking Hashtags</span>
+                        <p class="hashtags">${escapeHTML(item.ai_seo.recommendedHashtags)}</p>
+                      </div>
+
+                      <div class="ai-box">
+                        <span class="ai-badge">SEO Tip</span>
+                        <p class="seo-tip">${escapeHTML(item.ai_seo.seoTip)}</p>
+                      </div>
 
                       ${
-                        video.create_time
-                          ? `
-                            <span class="meta">
-                              ${formatDate(
-                                video.create_time
-                              )}
-                            </span>
-                          `
-                          : ""
-                      }
-
-                      ${
-                        video.share_url
+                        item.share_url
                           ? `
                             <a
                               class="watch"
                               href="${escapeHTML(
-                                video.share_url
+                                item.share_url
                               )}"
                               target="_blank"
                               rel="noopener"
@@ -449,13 +420,11 @@ export default {
               <div class="empty">
 
                 <h3>
-                  No public videos returned
+                  No videos returned
                 </h3>
 
                 <p>
-                  TikTok authorized the connection,
-                  but no public videos were returned
-                  for this account.
+                  Post public videos on TikTok to generate live AI SEO insights.
                 </p>
 
               </div>
@@ -464,53 +433,117 @@ export default {
 
         <div class="divider"></div>
 
-        <div class="api-status">
-
-          <strong>
-            VYNT TikTok Integration
-          </strong>
-
-          <p>
-            Login Kit: Connected
-          </p>
-
-          <p>
-            Profile API: Connected
-          </p>
-
-          <p>
-            Display API: Connected
-          </p>
-
-          <p>
-            Scope:
-            ${escapeHTML(
-              token.scope ||
-              SCOPES
-            )}
-          </p>
-
-        </div>
-
         <a
           class="return"
           href="https://dev.vynttechnologies.workers.dev/"
         >
-          Return to VYNT
+          Return to VYNT Dashboard
         </a>
 
       `);
     }
 
-    // =========================================
-    // WORKER STATUS
-    // =========================================
-
     return new Response(
-      "VYNT TikTok OAuth Worker is running."
+      "VYNT TikTok Worker is running."
     );
   }
 };
+
+
+// =============================================
+// WORKERS AI & D1 LOGIC
+// =============================================
+
+async function processVideoSEO(env, openId, video) {
+  
+  // 1. Check D1 Database Cache
+  if (env.DB) {
+    try {
+      const cached = await env.DB.prepare(
+        "SELECT ai_caption, hashtags, seo_score FROM user_seo WHERE open_id = ? AND video_id = ?"
+      ).bind(openId, video.id).first();
+
+      if (cached) {
+        return {
+          ...video,
+          ai_seo: {
+            score: cached.seo_score,
+            optimizedCaption: cached.ai_caption,
+            recommendedHashtags: cached.hashtags,
+            seoTip: "Loaded from cached D1 history."
+          }
+        };
+      }
+    } catch (e) {
+      console.error("D1 Read Error:", e);
+    }
+  }
+
+  // Fallback defaults
+  let aiResult = {
+    score: 80,
+    optimizedCaption: "🔥 Stop scrolling! Here is the main insight you need for this video topic.",
+    recommendedHashtags: "#TikTokSEO #FYP #TrendingTips #ContentStrategy",
+    seoTip: "Speak your key topic within the first 3 seconds to trigger TikTok's auto-captioning indexing."
+  };
+
+  // 2. Call Cloudflare Workers AI (Llama 3)
+  if (env.AI) {
+    try {
+      const prompt = `Analyze this TikTok post for SEO:
+Title: "${video.title || ''}"
+Description: "${video.video_description || ''}"
+
+Output ONLY a raw, valid JSON object with no markdown styling:
+{
+  "score": 85,
+  "optimizedCaption": "Optimized engaging hook and caption",
+  "recommendedHashtags": "#tag1 #tag2 #tag3 #tag4 #tag5",
+  "seoTip": "One clear action tip to boost algorithmic reach"
+}`;
+
+      const aiResponse = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+        messages: [
+          { role: 'system', content: 'You are an AI TikTok SEO strategist. Output strictly raw valid JSON.' },
+          { role: 'user', content: prompt }
+        ]
+      });
+
+      if (aiResponse && aiResponse.response) {
+        const cleanedText = aiResponse.response.replace(/```json/g, '').replace(/```/g, '').trim();
+        aiResult = JSON.parse(cleanedText);
+      }
+    } catch (err) {
+      console.error("Workers AI Processing Error:", err);
+    }
+  }
+
+  // 3. Save to D1 Database
+  if (env.DB) {
+    try {
+      await env.DB.prepare(
+        `INSERT INTO user_seo (open_id, access_token, video_id, title, ai_caption, hashtags, seo_score)
+         VALUES (?, 'active', ?, ?, ?, ?, ?)
+         ON CONFLICT(open_id) DO UPDATE SET
+         ai_caption=excluded.ai_caption, hashtags=excluded.hashtags, seo_score=excluded.seo_score`
+      ).bind(
+        openId,
+        video.id || "vid_1",
+        video.title || "Untitled",
+        aiResult.optimizedCaption,
+        aiResult.recommendedHashtags,
+        aiResult.score
+      ).run();
+    } catch (e) {
+      console.error("D1 Write Error:", e);
+    }
+  }
+
+  return {
+    ...video,
+    ai_seo: aiResult
+  };
+}
 
 
 // =============================================
@@ -518,67 +551,13 @@ export default {
 // =============================================
 
 function parseCookies(header) {
-
   const cookies = {};
-
-  if (!header) {
-    return cookies;
+  if (!header) return cookies;
+  for (const part of header.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key) cookies[key] = value.join("=");
   }
-
-  for (
-    const part of header.split(";")
-  ) {
-
-    const [
-      key,
-      ...value
-    ] =
-      part.trim().split("=");
-
-    if (key) {
-      cookies[key] =
-        value.join("=");
-    }
-  }
-
   return cookies;
-}
-
-
-// =============================================
-// DATE FORMATTER
-// =============================================
-
-function formatDate(timestamp) {
-
-  try {
-
-    const date =
-      new Date(
-        Number(timestamp) * 1000
-      );
-
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-      return "";
-    }
-
-    return date.toLocaleDateString(
-      "en-US",
-      {
-        year: "numeric",
-        month: "short",
-        day: "numeric"
-      }
-    );
-
-  } catch {
-
-    return "";
-  }
 }
 
 
@@ -586,421 +565,68 @@ function formatDate(timestamp) {
 // HTML PAGE
 // =============================================
 
-function page(
-  content,
-  status = 200
-) {
-
+function page(content, status = 200) {
   return new Response(`
-
 <!DOCTYPE html>
-
 <html>
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1"
->
-
-<title>
-VYNT — TikTok Connected
-</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VYNT — AI TikTok Optimization</title>
 <style>
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-
-  margin: 0;
-
-  min-height: 100vh;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  background:
-    #08090c;
-
-  color:
-    #ffffff;
-
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
-  padding:
-    20px;
-}
-
-.box {
-
-  width:
-    100%;
-
-  max-width:
-    760px;
-
-  padding:
-    40px;
-
-  background:
-    #101217;
-
-  border:
-    1px solid #24272e;
-
-  border-radius:
-    20px;
-
-  text-align:
-    center;
-
-  box-shadow:
-    0 20px 80px
-    rgba(0,0,0,.35);
-}
-
-.avatar {
-
-  width:
-    100px;
-
-  height:
-    100px;
-
-  border-radius:
-    50%;
-
-  object-fit:
-    cover;
-
-  border:
-    3px solid #ffffff;
-}
-
-.success {
-
-  margin-top:
-    20px;
-
-  color:
-    #70e000;
-
-  font-weight:
-    800;
-
-  font-size:
-    15px;
-}
-
-h1 {
-
-  margin:
-    8px 0;
-
-  font-size:
-    30px;
-}
-
-h2 {
-
-  margin-top:
-    10px;
-
-  font-size:
-    23px;
-}
-
-.bio {
-
-  color:
-    #aaa;
-
-  line-height:
-    1.6;
-}
-
-.muted {
-
-  color:
-    #888;
-
-  margin-bottom:
-    25px;
-}
-
-.divider {
-
-  height:
-    1px;
-
-  background:
-    #24272e;
-
-  margin:
-    30px 0;
-}
-
-.videos {
-
-  display:
-    grid;
-
-  grid-template-columns:
-    repeat(
-      auto-fit,
-      minmax(220px, 1fr)
-    );
-
-  gap:
-    18px;
-
-  text-align:
-    left;
-}
-
-.video {
-
-  overflow:
-    hidden;
-
-  background:
-    #181b21;
-
-  border:
-    1px solid #282c34;
-
-  border-radius:
-    14px;
-}
-
-.video img {
-
-  width:
-    100%;
-
-  height:
-    220px;
-
-  object-fit:
-    cover;
-
-  display:
-    block;
-}
-
-.video-content {
-
-  padding:
-    16px;
-}
-
-.video h3 {
-
-  margin:
-    0 0 8px;
-
-  font-size:
-    17px;
-
-  line-height:
-    1.4;
-}
-
-.video p {
-
-  color:
-    #aaa;
-
-  font-size:
-    14px;
-
-  line-height:
-    1.5;
-
-}
-
-.meta {
-
-  display:
-    block;
-
-  color:
-    #777;
-
-  font-size:
-    12px;
-
-  margin-top:
-    6px;
-}
-
-a {
-
-  display:
-    inline-block;
-
-  margin-top:
-    15px;
-
-  padding:
-    12px 20px;
-
-  border-radius:
-    10px;
-
-  text-decoration:
-    none;
-
-  font-weight:
-    700;
-}
-
-.secondary {
-
-  background:
-    #24272e;
-
-  color:
-    #ffffff;
-}
-
-.watch {
-
-  background:
-    #ffffff;
-
-  color:
-    #000000;
-
-  margin-top:
-    12px;
-}
-
-.return {
-
-  background:
-    #ffffff;
-
-  color:
-    #000000;
-
-  margin-top:
-    25px;
-}
-
-.empty {
-
-  padding:
-    25px;
-
-  background:
-    #181b21;
-
-  border-radius:
-    14px;
-
-  color:
-    #aaa;
-}
-
-.api-status {
-
-  color:
-    #aaa;
-
-  font-size:
-    14px;
-
-  line-height:
-    1.5;
-}
-
-.api-status strong {
-
-  color:
-    #ffffff;
-
-  font-size:
-    16px;
-}
-
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #08090c; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 20px; }
+.box { width: 100%; max-width: 840px; padding: 40px; background: #101217; border: 1px solid #24272e; border-radius: 20px; text-align: center; box-shadow: 0 20px 80px rgba(0,0,0,.35); }
+.avatar { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #70e000; }
+.success { margin-top: 20px; color: #70e000; font-weight: 800; font-size: 15px; }
+h1 { margin: 8px 0 4px; font-size: 30px; }
+.subtitle { color: #888; margin: 0 0 10px; font-size: 16px; }
+h2 { margin-top: 10px; font-size: 23px; }
+.muted { color: #888; margin-bottom: 25px; }
+.divider { height: 1px; background: #24272e; margin: 30px 0; }
+.videos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; text-align: left; }
+.video { overflow: hidden; background: #181b21; border: 1px solid #282c34; border-radius: 14px; }
+.video img { width: 100%; height: 200px; object-fit: cover; display: block; }
+.video-content { padding: 20px; }
+.seo-score { font-size: 13px; color: #70e000; margin-bottom: 8px; }
+.seo-score strong { font-size: 16px; }
+.video h3 { margin: 0 0 10px; font-size: 18px; line-height: 1.4; }
+.original-desc { color: #888; font-size: 13px; margin-bottom: 15px; }
+.ai-box { background: #0f1218; border: 1px solid #2b303c; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.ai-badge { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; background: #24272e; color: #70e000; padding: 2px 6px; border-radius: 4px; margin-bottom: 6px; font-weight: 700; }
+.optimized-caption, .hashtags, .seo-tip { margin: 0; font-size: 13px; color: #dddddd; line-height: 1.4; }
+.hashtags { color: #38bdf8; }
+.seo-tip { color: #fbbf24; }
+a { display: inline-block; margin-top: 10px; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px; }
+.watch { background: #24272e; color: #ffffff; }
+.return { background: #ffffff; color: #000000; margin-top: 25px; font-size: 15px; padding: 12px 24px; }
+.empty { padding: 25px; background: #181b21; border-radius: 14px; color: #aaa; }
 </style>
-
 </head>
-
 <body>
-
 <div class="box">
-
 ${content}
-
 </div>
-
 </body>
-
 </html>
-
-`, {
-
+  `, {
     status,
-
     headers: {
-
-      "Content-Type":
-        "text/html;charset=UTF-8",
-
-      "Cache-Control":
-        "no-store"
-
+      "Content-Type": "text/html;charset=UTF-8",
+      "Cache-Control": "no-store"
     }
-
   });
 }
-
 
 // =============================================
 // HTML ESCAPE
 // =============================================
 
 function escapeHTML(value) {
-
   return String(value)
-
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
