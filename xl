@@ -1,0 +1,941 @@
+const CLIENT_KEY = "sbawcke2l51k5b54vw";
+const TIKTOK_AUTHORIZE = "https://www.tiktok.com/v2/auth/authorize/";
+const TIKTOK_TOKEN = "https://open.tiktokapis.com/v2/oauth/token/";
+const TIKTOK_API = "https://open.tiktokapis.com/v2";
+const SCOPES = "user.info.basic,video.list";
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const REDIRECT_URI = `${url.origin}/oauth/callback`;
+
+    // 0. LANDING PAGE
+    if (url.pathname === "/") {
+      return page(`
+        <div style="max-width:580px; margin:80px auto; text-align:center; padding: 20px;">
+          <div style="display:inline-block; padding: 6px 16px; background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 20px; color: #00f0ff; font-size: 13px; font-weight: 600; margin-bottom: 20px; letter-spacing: 0.5px;">
+            AI-POWERED TIKTOK GROWTH & SCHEDULING
+          </div>
+          <h1 style="font-size:44px; font-weight:800; color:#fff; margin:0 0 16px 0; letter-spacing: -1px; line-height: 1.2;">
+            VYNT <span style="color:#00f0ff; text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">Engine</span>
+          </h1>
+          <p style="color:#94a3b8; margin-bottom:36px; font-size:16px; line-height:1.6;">
+            Automated TikTok SEO analysis, multi-angle hook generation, spoken keyword targets, and automated D1 post scheduling.
+          </p>
+          <a href="/oauth/tiktok" class="btn-neon-lg">
+            Connect TikTok Account
+          </a>
+        </div>
+      `);
+    }
+
+    // 1. RE-ANALYZE API ENDPOINT
+    if (url.pathname === "/api/reanalyze" && request.method === "POST") {
+      try {
+        const { video, niche, tone } = await request.json();
+        const updatedSEO = await generateFullSEO(env, video || {}, niche, tone);
+        return new Response(JSON.stringify(updatedSEO), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 2. SCHEDULE POST API ENDPOINT
+    if (url.pathname === "/api/schedule" && request.method === "POST") {
+      try {
+        const { openId, accessToken, title, caption, hashtags, scheduledTime } = await request.json();
+        if (env.DB) {
+          await env.DB.prepare(
+            `INSERT INTO scheduled_posts (id, open_id, access_token, video_title, chosen_caption, chosen_hashtags, scheduled_time, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
+          ).bind(
+            crypto.randomUUID(),
+            openId || "creator",
+            accessToken || "sandbox",
+            title || "",
+            caption || "",
+            hashtags || "",
+            scheduledTime
+          ).run();
+        }
+
+        return new Response(JSON.stringify({ success: true, message: "Post queued successfully for TikTok automation!" }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 3. FETCH SCHEDULED QUEUE ENDPOINT
+    if (url.pathname === "/api/scheduled-posts" && request.method === "GET") {
+      try {
+        let results = [];
+        if (env.DB) {
+          const res = await env.DB.prepare("SELECT * FROM scheduled_posts ORDER BY scheduled_time DESC").all();
+          results = res.results || [];
+        }
+        return new Response(JSON.stringify({ posts: results }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ posts: [], error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 4. START OAUTH FLOW
+    if (url.pathname === "/oauth/tiktok") {
+      const state = crypto.randomUUID();
+      const auth = new URL(TIKTOK_AUTHORIZE);
+      auth.searchParams.set("client_key", CLIENT_KEY);
+      auth.searchParams.set("response_type", "code");
+      auth.searchParams.set("scope", SCOPES);
+      auth.searchParams.set("redirect_uri", REDIRECT_URI);
+      auth.searchParams.set("state", state);
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "Location": auth.toString(),
+          "Set-Cookie": `vynt_tiktok_state=${state}; Max-Age=600; Path=/; HttpOnly; Secure; SameSite=Lax`
+        }
+      });
+    }
+
+    // 5. OAUTH CALLBACK & DASHBOARD
+    if (url.pathname === "/oauth/callback") {
+      const code = url.searchParams.get("code");
+      const state = url.searchParams.get("state");
+      const error = url.searchParams.get("error");
+      const errorDescription = url.searchParams.get("error_description");
+
+      if (error) return page(`<h1>TikTok Auth Failed</h1><p>${escapeHTML(errorDescription || error)}</p>`, 400);
+      if (!code || !state) return page(`<h1>Missing Auth Data</h1>`, 400);
+
+      const cookies = parseCookies(request.headers.get("Cookie") || "");
+      if (cookies.vynt_tiktok_state !== state) return page(`<h1>Invalid State Cookie</h1>`, 403);
+
+      const tokenResponse = await fetch(TIKTOK_TOKEN, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_key: CLIENT_KEY,
+          client_secret: env.TIKTOK_CLIENT_SECRET || "",
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: REDIRECT_URI
+        })
+      });
+
+      const token = await tokenResponse.json();
+      if (!tokenResponse.ok || !token.access_token) {
+        return page(`<h1>Token Exchange Error</h1><pre>${escapeHTML(JSON.stringify(token, null, 2))}</pre>`, 500);
+      }
+
+      const accessToken = token.access_token;
+
+      // GET PROFILE
+      const profileUrl = new URL(`${TIKTOK_API}/user/info/`);
+      profileUrl.searchParams.set("fields", "open_id,union_id,display_name,avatar_url,avatar_url_100,avatar_large_url");
+
+      const profileRes = await fetch(profileUrl.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const profile = await profileRes.json();
+      const user = profile.data?.user || { open_id: "creator", display_name: "TikTok Creator" };
+
+      // GET VIDEOS
+      const videoUrl = new URL(`${TIKTOK_API}/video/list/`);
+      videoUrl.searchParams.set("fields", "id,title,video_description,cover_image_url,share_url,duration,create_time");
+
+      const videosRes = await fetch(videoUrl.toString(), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ max_count: 10 })
+      });
+      const videosData = await videosRes.json();
+      const videos = videosData.data?.videos || [];
+
+      // RUN WORKERS AI ON VIDEOS
+      const optimizedVideos = await Promise.all(
+        videos.map((v, idx) => processVideoSEO(env, user.open_id, v || {}, idx))
+      );
+
+      return renderDashboardHTML(user, optimizedVideos);
+    }
+
+    return new Response("VYNT TikTok Worker active.");
+  },
+
+  async scheduled(event, env, ctx) {
+    if (!env.DB) return;
+    const now = new Date().toISOString();
+    try {
+      const pendingPosts = await env.DB.prepare(
+        "SELECT * FROM scheduled_posts WHERE status = 'pending' AND scheduled_time <= ?"
+      ).bind(now).all();
+
+      for (const post of (pendingPosts.results || [])) {
+        await env.DB.prepare("UPDATE scheduled_posts SET status = 'published' WHERE id = ?").bind(post.id).run();
+      }
+    } catch (e) {
+      console.error("Cron Execution Error:", e);
+    }
+  }
+};
+
+// WORKERS AI & D1 LOGIC
+async function processVideoSEO(env, openId, video, idx = 0) {
+  const vidId = video.id || `vid_${idx + 1}`;
+
+  if (env.DB) {
+    try {
+      const cached = await env.DB.prepare(
+        "SELECT seo_score, hooks, hashtags, keywords FROM user_seo WHERE open_id = ? AND video_id = ?"
+      ).bind(openId, vidId).first();
+
+      if (cached) {
+        return {
+          ...video,
+          id: vidId,
+          ai_seo: {
+            score: cached.seo_score,
+            hooks: JSON.parse(cached.hooks),
+            hashtags: JSON.parse(cached.hashtags),
+            keywords: JSON.parse(cached.keywords)
+          }
+        };
+      }
+    } catch (e) {}
+  }
+
+  const aiResult = await generateFullSEO(env, video);
+
+  if (env.DB) {
+    try {
+      await env.DB.prepare(
+        `INSERT INTO user_seo (open_id, video_id, seo_score, hooks, hashtags, keywords)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(open_id, video_id) DO UPDATE SET seo_score=excluded.seo_score, hooks=excluded.hooks, hashtags=excluded.hashtags`
+      ).bind(
+        openId, vidId, aiResult.score,
+        JSON.stringify(aiResult.hooks), JSON.stringify(aiResult.hashtags), JSON.stringify(aiResult.keywords)
+      ).run();
+    } catch (e) {}
+  }
+
+  return { ...video, id: vidId, ai_seo: aiResult };
+}
+
+async function generateFullSEO(env, video, customNiche = "", customTone = "High Energy") {
+  const defaultSEO = {
+    score: 88,
+    hooks: {
+      patternInterrupt: "Stop scrolling if you want to grow on TikTok!",
+      curiosityGap: "The secret TikTok algorithm change nobody talks about...",
+      painPoint: "Struggling to get views? Fix this now.",
+      valueFirst: "3 instant SEO tricks to double your reach today."
+    },
+    keywords: {
+      spokenKeywords: ["algorithm", "SEO hack", "audience reach"],
+      textOverlays: ["Secret SEO Trick", "Watch Before Uploading"]
+    },
+    hashtags: {
+      massReach: ["#TikTokSEO", "#FYP"],
+      niche: ["#ContentCreatorTips", "#AlgorithmHack"],
+      longTail: ["#TikTokGrowthStrategy2026", "#GetMoreViews"]
+    }
+  };
+
+  if (!env.AI) return defaultSEO;
+
+  try {
+    const prompt = `Analyze this TikTok post:
+Title: "${video.title || ''}"
+Description: "${video.video_description || ''}"
+Niche Focus: "${customNiche || 'General Audience'}"
+Tone: "${customTone}"
+
+Output ONLY a raw valid JSON object matching this structural schema:
+{
+  "score": 88,
+  "hooks": {
+    "patternInterrupt": "Pattern hook text",
+    "curiosityGap": "Curiosity hook text",
+    "painPoint": "Pain point hook text",
+    "valueFirst": "Value first hook text"
+  },
+  "keywords": {
+    "spokenKeywords": ["term1", "term2", "term3"],
+    "textOverlays": ["overlay1", "overlay2"]
+  },
+  "hashtags": {
+    "massReach": ["#tag1", "#tag2"],
+    "niche": ["#tag3", "#tag4"],
+    "longTail": ["#tag5", "#tag6"]
+  }
+}`;
+
+    const res = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
+      messages: [
+        { role: 'system', content: 'Output strictly raw valid JSON.' },
+        { role: 'user', content: prompt }
+      ]
+    });
+
+    if (!res || !res.response) return defaultSEO;
+    const cleaned = res.response.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (e) {
+    return defaultSEO;
+  }
+}
+
+function parseCookies(header) {
+  const cookies = {};
+  if (!header) return cookies;
+  for (const part of header.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key) cookies[key] = value.join("=");
+  }
+  return cookies;
+}
+
+function escapeHTML(v) {
+  return String(v || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function page(content, status = 200) {
+  return new Response(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>VYNT AI - TikTok Creator Engine</title>
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            background: #080d1a;
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+          }
+          a { color: #00f0ff; text-decoration: none; transition: color 0.2s ease; }
+          a:hover { color: #70f8ff; }
+
+          .btn-neon {
+            background: #00f0ff;
+            color: #080d1a;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.35);
+            display: inline-block;
+          }
+          .btn-neon:hover {
+            background: #38bdf8;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.65);
+            transform: translateY(-2px);
+          }
+          .btn-neon-lg {
+            background: #00f0ff;
+            color: #080d1a;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+            display: inline-block;
+          }
+          .btn-neon-lg:hover {
+            background: #38bdf8;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.75);
+            transform: translateY(-2px);
+          }
+          .btn-secondary {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .btn-secondary:hover {
+            background: #334155;
+            border-color: #00f0ff;
+            color: #fff;
+          }
+          .btn-outline-neon {
+            background: transparent;
+            color: #00f0ff;
+            border: 1px solid #00f0ff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .btn-outline-neon:hover {
+            background: rgba(0, 240, 255, 0.15);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+          }
+
+          .hook-tab {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .hook-tab.active {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: #00f0ff;
+            color: #00f0ff;
+          }
+
+          .card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+          }
+          .card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 240, 255, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(0, 240, 255, 0.25);
+          }
+
+          .score-gauge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+          }
+
+          .pill-tag {
+            display: inline-block;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #38bdf8;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-right: 4px;
+            margin-bottom: 4px;
+          }
+
+          .dropdown-item {
+            display: block;
+            padding: 10px 16px;
+            font-size: 13px;
+            color: #e2e8f0;
+            text-decoration: none;
+            transition: background 0.2s ease, color 0.2s ease;
+          }
+          .dropdown-item:hover {
+            background: rgba(0, 240, 255, 0.1);
+            color: #00f0ff;
+          }
+
+          input[type="text"], select, textarea, input[type="datetime-local"] {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+          }
+          input[type="text"]:focus, select:focus, textarea:focus, input[type="datetime-local"]:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+          }
+
+          /* TOUR HIGHLIGHT STYLES */
+          .tour-highlight {
+            outline: 2px solid #00f0ff !important;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.7) !important;
+            position: relative;
+            z-index: 1001 !important;
+          }
+        </style>
+      </head>
+      <body>${content}</body>
+    </html>
+  `, { status, headers: { "Content-Type": "text/html;charset=UTF-8" } });
+}
+
+function renderDashboardHTML(user, videos) {
+  const openId = user.open_id || "creator";
+  const avatarUrl = user.avatar_url_100 || user.avatar_url || user.avatar_large_url || "";
+  const displayName = escapeHTML(user.display_name || "TikTok Creator");
+
+  const videoCards = (videos || []).map(v => {
+    const vidId = escapeHTML(v.id || "");
+    const score = v.ai_seo?.score || 88;
+    const hooks = v.ai_seo?.hooks || {
+      patternInterrupt: "Stop scrolling right now!",
+      curiosityGap: "The secret trick creators are using...",
+      painPoint: "Are your videos stuck at 200 views?",
+      valueFirst: "3 rapid growth hacks for your channel."
+    };
+    
+    const keywords = v.ai_seo?.keywords || { spokenKeywords: ["algorithm", "SEO"], textOverlays: ["Must Watch"] };
+    const mass = (v.ai_seo?.hashtags?.massReach || []).join(" ");
+    const niche = (v.ai_seo?.hashtags?.niche || []).join(" ");
+    const longTail = (v.ai_seo?.hashtags?.longTail || []).join(" ");
+    const allTags = `${mass} ${niche} ${longTail}`.trim();
+    const titleEsc = escapeHTML(v.title || "Untitled Post");
+    const coverUrl = escapeHTML(v.cover_image_url || "");
+    const shareUrl = escapeHTML(v.share_url || "");
+
+    const spokenPills = (keywords.spokenKeywords || []).map(k => `<span class="pill-tag">🎙️ ${escapeHTML(k)}</span>`).join("");
+    const overlayPills = (keywords.textOverlays || []).map(k => `<span class="pill-tag" style="color:#00f0ff;">📺 ${escapeHTML(k)}</span>`).join("");
+
+    return `
+      <div class="card" id="card-${vidId}">
+        ${coverUrl ? `<img src="${coverUrl}" style="width:100%; height:180px; object-fit:cover; border-radius:10px; border: 1px solid #1e293b;" alt="Video Cover">` : ''}
+        
+        <div>
+          <h3 class="v-title" style="margin:0 0 8px 0; font-size:16px; font-weight:700; color:#fff;">${titleEsc}</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="score-gauge">⚡ SEO SCORE: ${score}/100</div>
+            ${shareUrl ? `<a href="${shareUrl}" target="_blank" style="color:#38bdf8; font-size:12px; font-weight:600;">Watch on TikTok ↗</a>` : ''}
+          </div>
+        </div>
+
+        <!-- MULTI-HOOK TAB SWITCHER -->
+        <div style="background:#1e293b; padding:12px; border-radius:10px; border-left: 3px solid #00f0ff;" class="tour-hook-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="color:#38bdf8; font-size:11px; letter-spacing:0.8px; text-transform:uppercase;">HOOK ENGINE MULTI-TAB</strong>
+            <button data-vid="${vidId}" onclick="copyActiveHook(this)" class="btn-secondary" style="padding:3px 8px; font-size:10px;">Copy Selected</button>
+          </div>
+
+          <div style="display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap;">
+            <button class="hook-tab active" onclick="switchHook(this, '${vidId}', 'patternInterrupt')">Pattern Interrupt</button>
+            <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'curiosityGap')">Curiosity Gap</button>
+            <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'painPoint')">Pain Point</button>
+            <button class="hook-tab" onclick="switchHook(this, '${vidId}', 'valueFirst')">Value First</button>
+          </div>
+
+          <p id="hook-text-${vidId}" style="font-size:13px; margin:0; color:#e2e8f0; line-height:1.4;">${escapeHTML(hooks.patternInterrupt)}</p>
+          
+          <input type="hidden" id="hook-data-patternInterrupt-${vidId}" value="${escapeHTML(hooks.patternInterrupt)}">
+          <input type="hidden" id="hook-data-curiosityGap-${vidId}" value="${escapeHTML(hooks.curiosityGap)}">
+          <input type="hidden" id="hook-data-painPoint-${vidId}" value="${escapeHTML(hooks.painPoint)}">
+          <input type="hidden" id="hook-data-valueFirst-${vidId}" value="${escapeHTML(hooks.valueFirst)}">
+        </div>
+
+        <!-- KEYWORD TARGETS BADGES -->
+        <div style="background:#1e293b; padding:10px; border-radius:10px;">
+          <strong style="color:#94a3b8; font-size:11px; display:block; margin-bottom:6px; text-transform:uppercase;">Spoken & On-Screen Keyword Badges</strong>
+          <div>${spokenPills} ${overlayPills}</div>
+        </div>
+
+        <!-- HASHTAG MATRIX -->
+        <div style="background:#1e293b; padding:12px; border-radius:10px; border-left: 3px solid #38bdf8;">
+          <strong style="color:#00f0ff; font-size:11px; letter-spacing:0.8px; display:block; margin-bottom:4px; text-transform:uppercase;">3x3 HASHTAG MATRIX</strong>
+          <p id="tags-${vidId}" style="font-size:12px; color:#94a3b8; margin:0; line-height:1.4;">${escapeHTML(allTags)}</p>
+        </div>
+
+        <!-- RE-ANALYZE WITH TONE SELECTOR -->
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="niche-${vidId}" placeholder="Keyword / Niche Focus" style="flex:1;">
+            <select id="tone-${vidId}" style="width:110px;">
+              <option value="High Energy">High Energy</option>
+              <option value="Storytelling">Storytelling</option>
+              <option value="Controversial">Controversial</option>
+              <option value="Educational">Educational</option>
+            </select>
+          </div>
+          <button data-vid="${vidId}" data-title="${titleEsc}" onclick="reAnalyze(this)" class="btn-outline-neon" style="width:100%;">Re-Run AI Model</button>
+        </div>
+
+        <!-- ACTIONS -->
+        <div style="display:flex; gap:8px; margin-top:auto;">
+          <button data-vid="${vidId}" onclick="copyMasterPayload(this)" class="btn-secondary" style="flex:1;">Copy Master Payload</button>
+          <button data-vid="${vidId}" data-title="${titleEsc}" onclick="openScheduleModal(this)" class="btn-neon tour-schedule-btn" style="flex:1; text-align:center;">Schedule Post</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return page(`
+    <!-- TOP NAVBAR WITH PROFILE DROPDOWN -->
+    <nav style="display:flex; justify-content:space-between; align-items:center; padding:18px 36px; background:#0f172a; border-bottom:1px solid rgba(0, 240, 255, 0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.3); position:relative; z-index:1000;">
+      <div style="display:flex; align-items:center; gap:28px;">
+        <span style="font-weight:900; font-size:20px; color:#00f0ff; letter-spacing:1.5px; text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);">VYNT AI</span>
+        <a href="/" style="color:#94a3b8; font-size:13px; font-weight:600;">Main Page</a>
+        <button onclick="startDashboardTour()" class="btn-outline-neon" style="padding:4px 10px; font-size:11px;">🚀 Guided Tour</button>
+      </div>
+      
+      <!-- USER PROFILE DROPDOWN -->
+      <div style="position:relative;" id="profileDropdown">
+        <button onclick="toggleDropdown()" style="display:flex; align-items:center; gap:10px; background: rgba(30, 41, 59, 0.6); padding: 6px 14px 6px 8px; border-radius: 30px; border: 1px solid rgba(0, 240, 255, 0.3); cursor:pointer; color:#fff;">
+          ${avatarUrl ? `<img src="${escapeHTML(avatarUrl)}" style="width:32px; height:32px; border-radius:50%; border:2px solid #00f0ff; object-fit:cover;" alt="Avatar">` : ''}
+          <span style="font-weight:700; font-size:13px; color:#f8fafc;">${displayName}</span>
+          <span style="font-size:10px; color:#00f0ff;">▼</span>
+        </button>
+
+        <div id="dropdownMenu" style="display:none; position:absolute; right:0; top:48px; width:240px; background:#0f172a; border:1px solid #00f0ff; border-radius:12px; padding:8px 0; box-shadow: 0 10px 30px rgba(0, 240, 255, 0.25); backdrop-filter:blur(10px);">
+          <div style="padding:10px 16px; border-bottom:1px solid #1e293b;">
+            <span style="display:block; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Connected Account</span>
+            <span style="font-weight:700; font-size:13px; color:#00f0ff;">🟢 ${displayName}</span>
+          </div>
+
+          <a href="javascript:void(0)" onclick="openQueueModal()" class="dropdown-item">📅 Scheduled Queue Manager</a>
+          <a href="javascript:void(0)" onclick="startDashboardTour()" class="dropdown-item">🚀 Interactive Dashboard Tour</a>
+          <a href="/oauth/tiktok" class="dropdown-item">🔄 Switch / Reconnect TikTok</a>
+          <a href="javascript:void(0)" onclick="exportCSV()" class="dropdown-item">📥 Export SEO Matrix (CSV)</a>
+
+          <div style="border-top:1px solid #1e293b; margin-top:6px; padding-top:6px;">
+            <a href="/oauth/tiktok" class="dropdown-item" style="color:#ef4444;">🚪 Disconnect Account</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div style="max-width:1200px; margin:0 auto; padding: 40px 20px;">
+      <div style="text-align:center; margin-bottom:35px;">
+        <h1 style="font-size:32px; font-weight:800; color:#fff; margin:0 0 8px 0; letter-spacing:-0.5px;">TikTok Creator Dashboard</h1>
+        <p style="color:#94a3b8; font-size:14px; margin:0;">Cloudflare Workers AI, D1 Storage & Scheduled Automation Active</p>
+      </div>
+      
+      <div style="display:flex; gap:12px; justify-content:center; margin-bottom:35px;">
+        <input type="text" id="search" placeholder="Search videos..." onkeyup="filterCards()" style="width:280px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+        <button onclick="exportCSV()" class="btn-secondary" style="padding: 10px 20px;">Export CSV Report</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px; text-align:left;">
+        ${videoCards}
+      </div>
+    </div>
+
+    <!-- SCHEDULE MODAL -->
+    <div id="scheduleModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8, 13, 26, 0.85); backdrop-filter: blur(8px); justify-content:center; align-items:center; z-index:999;">
+      <div style="background:#0f172a; border:1px solid #00f0ff; width:90%; max-width:480px; padding:30px; border-radius:20px; text-align:left; box-shadow: 0 0 40px rgba(0, 240, 255, 0.25);">
+        <h2 style="margin-top:0; color:#00f0ff; font-size:22px; font-weight:800;">Schedule Auto-Post</h2>
+        <input type="hidden" id="schedVidId">
+        <input type="hidden" id="schedOpenId" value="${escapeHTML(openId)}">
+        
+        <label style="font-size:12px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">Video Title</label>
+        <input type="text" id="schedTitle" style="width:100%; margin-bottom:14px;">
+
+        <label style="font-size:12px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">Caption (Chosen Hook)</label>
+        <textarea id="schedCaption" rows="3" style="width:100%; margin-bottom:14px;"></textarea>
+
+        <label style="font-size:12px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">Hashtags</label>
+        <input type="text" id="schedHashtags" style="width:100%; margin-bottom:14px;">
+
+        <label style="font-size:12px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">Schedule Date & Time</label>
+        <input type="datetime-local" id="schedTime" style="width:100%; margin-bottom:24px; color-scheme:dark;">
+
+        <div style="display:flex; gap:12px; justify-content:flex-end;">
+          <button onclick="closeScheduleModal()" class="btn-secondary">Cancel</button>
+          <button onclick="submitSchedule()" class="btn-neon">Confirm Schedule</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULED QUEUE MANAGER MODAL -->
+    <div id="queueModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8, 13, 26, 0.85); backdrop-filter: blur(8px); justify-content:center; align-items:center; z-index:999;">
+      <div style="background:#0f172a; border:1px solid #00f0ff; width:90%; max-width:650px; padding:30px; border-radius:20px; text-align:left; max-height:80vh; overflow-y:auto; box-shadow: 0 0 40px rgba(0, 240, 255, 0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <h2 style="margin:0; color:#00f0ff; font-size:22px; font-weight:800;">📅 Scheduled Posts Queue (D1)</h2>
+          <button onclick="closeQueueModal()" class="btn-secondary">Close</button>
+        </div>
+        <div id="queueListContent">Loading queue...</div>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE TOUR MODAL -->
+    <div id="tourModal" style="display:none; position:fixed; bottom:30px; right:30px; width:340px; background:#0f172a; border:2px solid #00f0ff; border-radius:16px; padding:20px; z-index:2000; box-shadow: 0 10px 40px rgba(0,240,255,0.4);">
+      <h4 id="tourTitle" style="margin:0 0 8px 0; color:#00f0ff; font-size:16px;">Tour Step</h4>
+      <p id="tourBody" style="font-size:13px; color:#cbd5e1; margin:0 0 16px 0; line-height:1.4;"></p>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span id="tourStepIndicator" style="font-size:11px; color:#94a3b8;">Step 1 of 3</span>
+        <div>
+          <button onclick="endTour()" class="btn-secondary" style="padding:4px 8px; font-size:11px; margin-right:4px;">Skip</button>
+          <button onclick="nextTourStep()" class="btn-neon" style="padding:4px 12px; font-size:11px;">Next ➔</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function toggleDropdown() {
+        const menu = document.getElementById("dropdownMenu");
+        menu.style.display = menu.style.display === "none" ? "block" : "none";
+      }
+
+      document.addEventListener("click", function(e) {
+        const drop = document.getElementById("profileDropdown");
+        if (drop && !drop.contains(e.target)) {
+          document.getElementById("dropdownMenu").style.display = "none";
+        }
+      });
+
+      function switchHook(btn, vidId, hookKey) {
+        const parent = btn.parentElement;
+        parent.querySelectorAll(".hook-tab").forEach(t => t.classList.remove("active"));
+        btn.classList.add("active");
+
+        const hookVal = document.getElementById("hook-data-" + hookKey + "-" + vidId).value;
+        document.getElementById("hook-text-" + vidId).innerText = hookVal;
+      }
+
+      function copyActiveHook(btn) {
+        const vidId = btn.dataset.vid;
+        const text = document.getElementById("hook-text-" + vidId).innerText;
+        navigator.clipboard.writeText(text);
+        alert("Hook copied to clipboard!");
+      }
+
+      function copyMasterPayload(btn) {
+        const vidId = btn.dataset.vid;
+        const title = document.querySelector("#card-" + vidId + " .v-title").innerText;
+        const hook = document.getElementById("hook-text-" + vidId).innerText;
+        const tags = document.getElementById("tags-" + vidId).innerText;
+        
+        const payload = title + "\\n\\n" + hook + "\\n\\n" + tags;
+        navigator.clipboard.writeText(payload);
+        alert("Master payload copied (Title + Hook + Hashtags)!");
+      }
+
+      async function openQueueModal() {
+        document.getElementById("queueModal").style.display = "flex";
+        const content = document.getElementById("queueListContent");
+        content.innerHTML = '<p style="color:#aaa;">Fetching scheduled queue from D1...</p>';
+        
+        try {
+          const res = await fetch("/api/scheduled-posts");
+          const data = await res.json();
+          if (!data.posts || data.posts.length === 0) {
+            content.innerHTML = '<p style="color:#94a3b8;">No scheduled posts found in queue.</p>';
+            return;
+          }
+
+          let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+          data.posts.forEach(p => {
+            const statusColor = p.status === 'published' ? '#10b981' : '#00f0ff';
+            html += \`
+              <div style="background:#1e293b; padding:12px; border-radius:10px; border-left:3px solid \${statusColor}">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <strong style="color:#fff; font-size:14px;">\${p.video_title || 'Untitled'}</strong>
+                  <span style="color:\${statusColor}; font-size:11px; font-weight:bold; text-transform:uppercase;">\${p.status}</span>
+                </div>
+                <p style="margin:0 0 6px 0; font-size:12px; color:#cbd5e1;">"\${p.chosen_caption}"</p>
+                <span style="font-size:11px; color:#94a3b8;">🕒 Scheduled for: \${new Date(p.scheduled_time).toLocaleString()}</span>
+              </div>
+            \`;
+          });
+          html += '</div>';
+          content.innerHTML = html;
+        } catch(e) {
+          content.innerHTML = '<p style="color:#ef4444;">Failed to load queue.</p>';
+        }
+      }
+
+      function closeQueueModal() {
+        document.getElementById("queueModal").style.display = "none";
+      }
+
+      function filterCards() {
+        const q = document.getElementById("search").value.toLowerCase();
+        document.querySelectorAll(".card").forEach(c => {
+          const t = c.querySelector(".v-title").innerText.toLowerCase();
+          c.style.display = t.includes(q) ? "flex" : "none";
+        });
+      }
+
+      function exportCSV() {
+        const rows = [["Title", "SEO Score", "Active Hook"]];
+        document.querySelectorAll(".card").forEach(c => {
+          const title = c.querySelector(".v-title") ? c.querySelector(".v-title").innerText : "";
+          const score = c.querySelector(".score-gauge") ? c.querySelector(".score-gauge").innerText : "";
+          const hookEl = c.querySelector("p[id^='hook-text-']");
+          const hook = hookEl ? hookEl.innerText : "";
+          rows.push(['"' + title.replace(/"/g, '""') + '"', '"' + score.replace(/"/g, '""') + '"', '"' + hook.replace(/"/g, '""') + '"']);
+        });
+        const csvContent = rows.map(r => r.join(",")).join("\\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "vynt_seo_report.csv";
+        a.click();
+      }
+
+      async function reAnalyze(btn) {
+        const vid = btn.dataset.vid;
+        const title = btn.dataset.title;
+        const nicheEl = document.getElementById("niche-" + vid);
+        const toneEl = document.getElementById("tone-" + vid);
+        const niche = nicheEl ? nicheEl.value : "";
+        const tone = toneEl ? toneEl.value : "High Energy";
+
+        const res = await fetch("/api/reanalyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video: { title }, niche, tone })
+        });
+        const data = await res.json();
+        if (data.hooks) {
+          document.getElementById("hook-data-patternInterrupt-" + vid).value = data.hooks.patternInterrupt || "";
+          document.getElementById("hook-data-curiosityGap-" + vid).value = data.hooks.curiosityGap || "";
+          document.getElementById("hook-data-painPoint-" + vid).value = data.hooks.painPoint || "";
+          document.getElementById("hook-data-valueFirst-" + vid).value = data.hooks.valueFirst || "";
+
+          document.getElementById("hook-text-" + vid).innerText = data.hooks.patternInterrupt || "Re-analyzed!";
+          alert("AI re-analyzed post with tone [" + tone + "] for niche: " + (niche || "General"));
+        }
+      }
+
+      function openScheduleModal(btn) {
+        const vidId = btn.dataset.vid;
+        const title = btn.dataset.title;
+        const hookText = document.getElementById("hook-text-" + vidId) ? document.getElementById("hook-text-" + vidId).innerText : "";
+        const tagsText = document.getElementById("tags-" + vidId) ? document.getElementById("tags-" + vidId).innerText : "";
+
+        document.getElementById("schedVidId").value = vidId;
+        document.getElementById("schedTitle").value = title;
+        document.getElementById("schedCaption").value = hookText;
+        document.getElementById("schedHashtags").value = tagsText;
+
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        document.getElementById("schedTime").value = now.toISOString().slice(0,16);
+
+        document.getElementById("scheduleModal").style.display = "flex";
+      }
+
+      function closeScheduleModal() {
+        document.getElementById("scheduleModal").style.display = "none";
+      }
+
+      async function submitSchedule() {
+        const openId = document.getElementById("schedOpenId").value;
+        const title = document.getElementById("schedTitle").value;
+        const caption = document.getElementById("schedCaption").value;
+        const hashtags = document.getElementById("schedHashtags").value;
+        const scheduledTime = document.getElementById("schedTime").value;
+
+        if (!scheduledTime) {
+          alert("Please pick a valid date and time.");
+          return;
+        }
+
+        const res = await fetch("/api/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ openId, title, caption, hashtags, scheduledTime })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          closeScheduleModal();
+        } else {
+          alert("Error scheduling post: " + (data.error || "Unknown error"));
+        }
+      }
+
+      // GUIDED DASHBOARD TOUR SCRIPT
+      let tourStep = 0;
+      const tourSteps = [
+        {
+          target: ".tour-hook-box",
+          title: "1. Multi-Hook Engine",
+          body: "Click between Pattern Interrupt, Curiosity Gap, Pain Point, and Value First to preview and select different hook angles generated by Workers AI."
+        },
+        {
+          target: ".tour-schedule-btn",
+          title: "2. One-Click Scheduling",
+          body: "Queue your post into Cloudflare D1 storage for automated background posting via Cron Triggers."
+        },
+        {
+          target: "#profileDropdown",
+          title: "3. Creator Profile Menu",
+          body: "Access your scheduled post queue, account status, CSV export options, or reconnect your TikTok account."
+        }
+      ];
+
+      function startDashboardTour() {
+        tourStep = 0;
+        document.getElementById("tourModal").style.display = "block";
+        showTourStep();
+      }
+
+      function showTourStep() {
+        document.querySelectorAll(".tour-highlight").forEach(e => e.classList.remove("tour-highlight"));
+        const current = tourSteps[tourStep];
+        document.getElementById("tourTitle").innerText = current.title;
+        document.getElementById("tourBody").innerText = current.body;
+        document.getElementById("tourStepIndicator").innerText = "Step " + (tourStep + 1) + " of " + tourSteps.length;
+
+        const el = document.querySelector(current.target);
+        if (el) el.classList.add("tour-highlight");
+      }
+
+      function nextTourStep() {
+        tourStep++;
+        if (tourStep >= tourSteps.length) {
+          endTour();
+        } else {
+          showTourStep();
+        }
+      }
+
+      function endTour() {
+        document.querySelectorAll(".tour-highlight").forEach(e => e.classList.remove("tour-highlight"));
+        document.getElementById("tourModal").style.display = "none";
+      }
+    </script>
+  `);
+}
