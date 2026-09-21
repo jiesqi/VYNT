@@ -8,4 +8,6 @@ https://dev.vynttechnologies.workers.dev/privacy/
 
 https://dev.vynttechnologies.workers.dev/
 
+VYNT is a gaming creator platform that uses TikTok Login Kit and TikTok’s Content Posting API to allow creators to connect their TikTok accounts and publish gaming content through the VYNT platform. Login Kit is used to securely authenticate users and obtain the basic TikTok account information needed to associate their TikTok account with their VYNT profile. After authentication, VYNT uses permitted TikTok user information to identify the connected account and provide account-specific functionality. The Content Posting API is used to support video uploads and publishing. Users can select or upload gaming videos through VYNT, provide applicable video details, and initiate the publishing process to their connected TikTok account. The API functionality is limited to the content-posting workflow and related account information required for that workflow. VYNT does not intend to access unrelated TikTok data. Users remain in control of the content they choose to upload and publish.
+
 https://vynt-tiktok-auth.vynttechnologies.workers.dev/oauth/callback
