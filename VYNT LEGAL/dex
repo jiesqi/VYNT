@@ -1,7 +1,7 @@
 const CLIENT_KEY = "sbawcke2l51k5b54vw";
-const TIKTOK_AUTHORIZE = "[https://www.tiktok.com/v2/auth/authorize/](https://www.tiktok.com/v2/auth/authorize/)";
-const TIKTOK_TOKEN = "[https://open.tiktokapis.com/v2/oauth/token/](https://open.tiktokapis.com/v2/oauth/token/)";
-const TIKTOK_API = "[https://open.tiktokapis.com/v2](https://open.tiktokapis.com/v2)";
+const TIKTOK_AUTHORIZE = "https://www.tiktok.com/v2/auth/authorize/";
+const TIKTOK_TOKEN = "https://open.tiktokapis.com/v2/oauth/token/";
+const TIKTOK_API = "https://open.tiktokapis.com/v2";
 const SCOPES = "user.info.basic,video.list";
 
 export default {
@@ -9,11 +9,11 @@ export default {
     const url = new URL(request.url);
     const REDIRECT_URI = `${url.origin}/oauth/callback`;
 
-    // 1. RE-ANALYZE API ENDPOINT (KEYWORD STEERING)
+    // 1. RE-ANALYZE API ENDPOINT
     if (url.pathname === "/api/reanalyze" && request.method === "POST") {
       try {
         const { video, niche, tone } = await request.json();
-        const updatedSEO = await generateFullSEO(env, video, niche, tone);
+        const updatedSEO = await generateFullSEO(env, video || {}, niche, tone);
         return new Response(JSON.stringify(updatedSEO), {
           headers: { "Content-Type": "application/json" }
         });
@@ -26,12 +26,14 @@ export default {
     if (url.pathname === "/api/schedule" && request.method === "POST") {
       try {
         const { openId, accessToken, title, caption, hashtags, scheduledTime } = await request.json();
-        await env.DB.prepare(
-          `INSERT INTO scheduled_posts (id, open_id, access_token, video_title, chosen_caption, chosen_hashtags, scheduled_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-          crypto.randomUUID(), openId, accessToken || "sandbox", title, caption, hashtags, scheduledTime
-        ).run();
+        if (env.DB) {
+          await env.DB.prepare(
+            `INSERT INTO scheduled_posts (id, open_id, access_token, video_title, chosen_caption, chosen_hashtags, scheduled_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            crypto.randomUUID(), openId, accessToken || "sandbox", title, caption, hashtags, scheduledTime
+          ).run();
+        }
 
         return new Response(JSON.stringify({ success: true, message: "Queued for TikTok automation!" }), {
           headers: { "Content-Type": "application/json" }
@@ -79,7 +81,7 @@ export default {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           client_key: CLIENT_KEY,
-          client_secret: env.TIKTOK_CLIENT_SECRET,
+          client_secret: env.TIKTOK_CLIENT_SECRET || "",
           code,
           grant_type: "authorization_code",
           redirect_uri: REDIRECT_URI
@@ -135,7 +137,7 @@ export default {
         "SELECT * FROM scheduled_posts WHERE status = 'pending' AND scheduled_time <= ?"
       ).bind(now).all();
 
-      for (const post of pendingPosts.results) {
+      for (const post of (pendingPosts.results || [])) {
         await env.DB.prepare("UPDATE scheduled_posts SET status = 'published' WHERE id = ?").bind(post.id).run();
       }
     } catch (e) {
@@ -258,7 +260,7 @@ function parseCookies(header) {
 }
 
 function escapeHTML(v) {
-  return String(v)
+  return String(v || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -271,6 +273,40 @@ function page(content, status = 200) {
 }
 
 function renderDashboardHTML(user, videos) {
+  const videoCards = (videos || []).map(v => {
+    const score = v.ai_seo?.score || 88;
+    const hookText = v.ai_seo?.hooks?.patternInterrupt || "Stop scrolling!";
+    const mass = (v.ai_seo?.hashtags?.massReach || []).join(" ");
+    const niche = (v.ai_seo?.hashtags?.niche || []).join(" ");
+    const longTail = (v.ai_seo?.hashtags?.longTail || []).join(" ");
+    const titleEsc = escapeHTML(v.title || "Untitled Post");
+
+    return `
+      <div class="card" style="background:#101217; border:1px solid #24272e; padding:20px; border-radius:12px;">
+        <h3 class="v-title">${titleEsc}</h3>
+        <p style="color:#70e000;">SEO Score: <strong>${score}/100</strong></p>
+        
+        <div style="background:#181b21; padding:10px; border-radius:8px; margin-bottom:10px;">
+          <strong style="color:#38bdf8; font-size:12px;">HOOK ENGINE</strong>
+          <p id="hook-${v.id}" style="font-size:13px; margin:5px 0;">${escapeHTML(hookText)}</p>
+          <button onclick="copyTxt('${v.id}')" style="background:#24272e; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Copy Hook</button>
+        </div>
+
+        <div style="background:#181b21; padding:10px; border-radius:8px; margin-bottom:10px;">
+          <strong style="color:#70e000; font-size:12px;">3x3 HASHTAG MATRIX</strong>
+          <p style="font-size:12px; color:#aaa; margin:5px 0;">
+            ${escapeHTML(mass + " " + niche + " " + longTail)}
+          </p>
+        </div>
+
+        <div style="display:flex; gap:6px; margin-top:10px;">
+          <input type="text" id="niche-${v.id}" placeholder="Keyword (e.g. Fitness)" style="flex:1; background:#181b21; border:1px solid #333; color:#fff; padding:6px; border-radius:4px; font-size:12px;">
+          <button onclick="reAnalyze('${v.id}', '${titleEsc}')" style="background:#70e000; color:#000; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Re-Run AI</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
   return page(`
     <h1>VYNT AI Dashboard — ${escapeHTML(user.display_name)}</h1>
     <p style="color:#888;">Workers AI & D1 Storage Active</p>
@@ -281,37 +317,16 @@ function renderDashboardHTML(user, videos) {
     </div>
 
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; text-align:left;">
-      ${videos.map(v => `
-        <div class="card" style="background:#101217; border:1px solid #24272e; padding:20px; border-radius:12px;">
-          <h3 class="v-title">${escapeHTML(v.title || "Untitled Post")}</h3>
-          <p style="color:#70e000;">SEO Score: <strong>${v.ai_seo.score}/100</strong></p>
-          
-          <div style="background:#181b21; padding:10px; border-radius:8px; margin-bottom:10px;">
-            <strong style="color:#38bdf8; font-size:12px;">HOOK ENGINE</strong>
-            <p id="hook-${v.id}" style="font-size:13px; margin:5px 0;">${escapeHTML(v.ai_seo.hooks.patternInterrupt)}</p>
-            <button onclick="copyTxt('${v.id}')" style="background:#24272e; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Copy Hook</button>
-          </div>
-
-          <div style="background:#181b21; padding:10px; border-radius:8px; margin-bottom:10px;">
-            <strong style="color:#70e000; font-size:12px;">3x3 HASHTAG MATRIX</strong>
-            <p style="font-size:12px; color:#aaa; margin:5px 0;">
-              ${v.ai_seo.hashtags.massReach.join(" ")} ${v.ai_seo.hashtags.niche.join(" ")} ${v.ai_seo.hashtags.longTail.join(" ")}
-            </p>
-          </div>
-
-          <div style="display:flex; gap:6px; margin-top:10px;">
-            <input type="text" id="niche-${v.id}" placeholder="Keyword (e.g. Fitness)" style="flex:1; background:#181b21; border:1px solid #333; color:#fff; padding:6px; border-radius:4px; font-size:12px;">
-            <button onclick="reAnalyze('${v.id}', '${escapeHTML(v.title)}')" style="background:#70e000; color:#000; border:none; padding:6px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Re-Run AI</button>
-          </div>
-        </div>
-      `).join("")}
+      ${videoCards}
     </div>
 
     <script>
       function copyTxt(id) {
-        const txt = document.getElementById("hook-" + id).innerText;
-        navigator.clipboard.writeText(txt);
-        alert("Hook copied to clipboard!");
+        const el = document.getElementById("hook-" + id);
+        if (el) {
+          navigator.clipboard.writeText(el.innerText);
+          alert("Hook copied to clipboard!");
+        }
       }
 
       function filterCards() {
@@ -327,8 +342,9 @@ function renderDashboardHTML(user, videos) {
         document.querySelectorAll(".card").forEach(c => {
           const t = '"' + c.querySelector(".v-title").innerText.replace(/"/g, '""') + '"';
           const s = c.querySelector("strong").innerText;
-          const h = '"' + c.querySelector("p[id^='hook-']").innerText.replace(/"/g, '""') + '"';
-          csv += \`\${t},\${s},\${h}\\n\`;
+          const hEl = c.querySelector("p[id^='hook-']");
+          const h = hEl ? '"' + hEl.innerText.replace(/"/g, '""') + '"' : '""';
+          csv += t + "," + s + "," + h + "\\n";
         });
         const blob = new Blob([csv], { type: "text/csv" });
         const a = document.createElement("a");
@@ -338,15 +354,17 @@ function renderDashboardHTML(user, videos) {
       }
 
       async function reAnalyze(vid, title) {
-        const niche = document.getElementById("niche-" + vid).value;
+        const nicheEl = document.getElementById("niche-" + vid);
+        const niche = nicheEl ? nicheEl.value : "";
         const res = await fetch("/api/reanalyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ video: { title }, niche, tone: "High Energy" })
         });
         const data = await res.json();
-        if (data.hooks) {
-          document.getElementById("hook-" + vid).innerText = data.hooks.patternInterrupt;
+        if (data.hooks && data.hooks.patternInterrupt) {
+          const hEl = document.getElementById("hook-" + vid);
+          if (hEl) hEl.innerText = data.hooks.patternInterrupt;
           alert("AI re-analyzed post for niche: " + (niche || "General"));
         }
       }
